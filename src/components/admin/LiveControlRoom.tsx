@@ -19,7 +19,6 @@ import { useGame } from '../../context/GameContext';
 import { Question, Team, CompetitionSettings, LeaderboardEntry } from '../../types';
 import { Timer } from '../common/Timer';
 import { AnswerRevealModal } from '../common/AnswerRevealModal';
-import { RoundScoreBreakdown } from '../participant/RoundScoreBreakdown';
 
 export const LiveControlRoom: React.FC = () => {
   const { gameState, fetchGameState, remainingSeconds } = useGame();
@@ -1046,11 +1045,6 @@ export const LiveControlRoom: React.FC = () => {
         </div>
       </div>
 
-      {/* Round Individual Scores Matrix */}
-      <RoundScoreBreakdown
-        defaultRound={selectedRound}
-        title={`Round ${selectedRound} Participant Leaderboard & Points Matrix`}
-      />
 
       {/* Reset Confirmation Modal */}
       {isResetConfirmOpen && (
