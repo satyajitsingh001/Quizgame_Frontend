@@ -11,10 +11,11 @@ import {
   RefreshCw,
   Radio,
   Sparkles,
-  Clock
+  Clock,
+  Maximize2
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { api } from '../../services/api';
+import { api, getFullImageUrl } from '../../services/api';
 import { useGame } from '../../context/GameContext';
 import { Question, Team, CompetitionSettings, LeaderboardEntry } from '../../types';
 import { Timer } from '../common/Timer';
@@ -39,6 +40,7 @@ export const LiveControlRoom: React.FC = () => {
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isRevealModalOpen, setIsRevealModalOpen] = useState(false);
+  const [isR2ImageZoomed, setIsR2ImageZoomed] = useState(false);
 
   // Load team cumulative scores across the competition
   const loadLeaderboardScores = async () => {
@@ -508,6 +510,57 @@ export const LiveControlRoom: React.FC = () => {
                   </h2>
                 </div>
               </div>
+
+              {/* Round 2 Defect Image Inspection Display */}
+              {currentQuestionData.round === 2 && currentQuestionData.round2ImageUrl && (
+                <div className="rounded-2xl overflow-hidden border border-slate-700 bg-slate-950 p-3 space-y-2.5 shadow-xl">
+                  <div className="flex items-center justify-between px-1 text-xs font-bold text-slate-300">
+                    <span className="flex items-center gap-1.5 text-cyan-400">
+                      <Eye className="w-4 h-4" />
+                      Defect Inspection Image
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setIsR2ImageZoomed(true)}
+                      className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-semibold flex items-center gap-1.5 transition-colors border border-slate-700"
+                    >
+                      <Maximize2 className="w-3.5 h-3.5 text-indigo-400" />
+                      Enlarge / Zoom
+                    </button>
+                  </div>
+                  <div
+                    className="relative flex items-center justify-center bg-black/60 rounded-xl overflow-hidden cursor-pointer group p-1"
+                    onClick={() => setIsR2ImageZoomed(true)}
+                  >
+                    <img
+                      src={getFullImageUrl(currentQuestionData.round2ImageUrl)}
+                      alt="Round 2 Defect"
+                      className="w-full max-h-[340px] object-contain mx-auto rounded-xl transition-transform duration-200 group-hover:scale-[1.01]"
+                    />
+                    <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                      <span className="px-3.5 py-1.5 rounded-xl bg-slate-900/95 text-white text-xs font-bold border border-slate-700 flex items-center gap-2 shadow-2xl">
+                        <Maximize2 className="w-3.5 h-3.5 text-cyan-400" /> Click to Zoom
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Round 2 Missing Image Notice */}
+              {currentQuestionData.round === 2 && !currentQuestionData.round2ImageUrl && (
+                <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-xs text-amber-300">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 shrink-0 text-amber-400" />
+                    <span>No defect image uploaded for this question yet.</span>
+                  </div>
+                  <Link
+                    to="/admin/questions"
+                    className="px-3 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 font-bold text-amber-200 border border-amber-500/40"
+                  >
+                    Upload in Question Bank
+                  </Link>
+                </div>
+              )}
 
               {/* If completed, show the official answer clearly below the question */}
               {isSelectedCompleted && (
@@ -1086,6 +1139,38 @@ export const LiveControlRoom: React.FC = () => {
         isAdmin={true}
         onNextQuestion={handleNextQuestion}
       />
+
+      {/* Zoom Modal for Round 2 Defect Image in Admin Live Control */}
+      {isR2ImageZoomed && currentQuestionData?.round2ImageUrl && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setIsR2ImageZoomed(false)}
+        >
+          <div
+            className="relative max-w-5xl max-h-[92vh] overflow-auto rounded-3xl border border-slate-700 p-4 bg-slate-950 shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
+              <span className="text-sm font-bold text-white flex items-center gap-2">
+                <Eye className="w-4 h-4 text-cyan-400" />
+                Defect Inspection View (Round 2 — Question {selectedQuestionNum})
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsR2ImageZoomed(false)}
+                className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs border border-slate-700 transition-colors"
+              >
+                ✕ Close Zoom
+              </button>
+            </div>
+            <img
+              src={getFullImageUrl(currentQuestionData.round2ImageUrl)}
+              alt="Zoomed Defect"
+              className="w-full max-h-[78vh] object-contain rounded-2xl mx-auto"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
