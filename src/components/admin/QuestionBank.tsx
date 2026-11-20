@@ -172,7 +172,9 @@ export const QuestionBank: React.FC = () => {
 
     // R2
     if (q.round === 2) {
-      setR2ImageUrl(q.round2ImageUrl || '');
+      const existingMainImg = q.round2ImageUrl || '';
+      setR2ImageUrl(existingMainImg);
+
       const z1 = q.round2Defects?.find(d => d.id === '1');
       const z2 = q.round2Defects?.find(d => d.id === '2');
       const z3 = q.round2Defects?.find(d => d.id === '3');
@@ -183,10 +185,30 @@ export const QuestionBank: React.FC = () => {
       setR2Zone3Term(z3?.correctTerm || '');
       setR2Zone4Term(z4?.correctTerm || '');
 
-      const imgA = q.round2Images?.find(i => i.id === 'A')?.imageUrl || z1?.imageUrl || q.round2ImageUrl || '';
-      const imgB = q.round2Images?.find(i => i.id === 'B')?.imageUrl || z2?.imageUrl || '';
-      const imgC = q.round2Images?.find(i => i.id === 'C')?.imageUrl || z3?.imageUrl || '';
-      const imgD = q.round2Images?.find(i => i.id === 'D')?.imageUrl || z4?.imageUrl || '';
+      // Load images from round2Images, defects, or main image fallback so NO image is lost
+      const imgA =
+        q.round2Images?.find(i => i.id === 'A')?.imageUrl ||
+        z1?.imageUrl ||
+        (q.round2Defects && q.round2Defects[0]?.imageUrl) ||
+        existingMainImg;
+
+      const imgB =
+        q.round2Images?.find(i => i.id === 'B')?.imageUrl ||
+        z2?.imageUrl ||
+        (q.round2Defects && q.round2Defects[1]?.imageUrl) ||
+        existingMainImg;
+
+      const imgC =
+        q.round2Images?.find(i => i.id === 'C')?.imageUrl ||
+        z3?.imageUrl ||
+        (q.round2Defects && q.round2Defects[2]?.imageUrl) ||
+        existingMainImg;
+
+      const imgD =
+        q.round2Images?.find(i => i.id === 'D')?.imageUrl ||
+        z4?.imageUrl ||
+        (q.round2Defects && q.round2Defects[3]?.imageUrl) ||
+        existingMainImg;
 
       setR2Zone1Image(imgA);
       setR2Zone2Image(imgB);
@@ -333,18 +355,53 @@ export const QuestionBank: React.FC = () => {
         ])
       );
 
+      // Retrieve the existing question record being edited (if any) so we NEVER drop existing images
+      const existingQ = editingId ? questions.find(q => q._id === editingId) : null;
+
+      const fallbackMainImg =
+        r2ImageUrl.trim() ||
+        r2Zone1Image.trim() ||
+        existingQ?.round2ImageUrl ||
+        '';
+
+      const finalImgA =
+        r2Zone1Image.trim() ||
+        existingQ?.round2Images?.find(i => i.id === 'A')?.imageUrl ||
+        existingQ?.round2Defects?.find(d => d.id === '1')?.imageUrl ||
+        fallbackMainImg;
+
+      const finalImgB =
+        r2Zone2Image.trim() ||
+        existingQ?.round2Images?.find(i => i.id === 'B')?.imageUrl ||
+        existingQ?.round2Defects?.find(d => d.id === '2')?.imageUrl ||
+        fallbackMainImg;
+
+      const finalImgC =
+        r2Zone3Image.trim() ||
+        existingQ?.round2Images?.find(i => i.id === 'C')?.imageUrl ||
+        existingQ?.round2Defects?.find(d => d.id === '3')?.imageUrl ||
+        fallbackMainImg;
+
+      const finalImgD =
+        r2Zone4Image.trim() ||
+        existingQ?.round2Images?.find(i => i.id === 'D')?.imageUrl ||
+        existingQ?.round2Defects?.find(d => d.id === '4')?.imageUrl ||
+        fallbackMainImg;
+
       const imgMap: Record<string, string> = {
-        'A': r2Zone1Image.trim(),
-        'B': r2Zone2Image.trim(),
-        'C': r2Zone3Image.trim(),
-        'D': r2Zone4Image.trim()
+        'A': finalImgA,
+        'B': finalImgB,
+        'C': finalImgC,
+        'D': finalImgD
       };
 
+      payload.round2ImageUrl = fallbackMainImg || finalImgA;
+
       payload.round2Images = [
-        { id: 'A', imageUrl: r2Zone1Image.trim() },
-        { id: 'B', imageUrl: r2Zone2Image.trim() },
-        { id: 'C', imageUrl: r2Zone3Image.trim() },
-        { id: 'D', imageUrl: r2Zone4Image.trim() }
+        { id: 'A', imageUrl: finalImgA },
+        { id: 'B', imageUrl: finalImgB },
+        { id: 'C', imageUrl: finalImgC },
+        { id: 'D', imageUrl: finalImgD }
       ];
 
       payload.round2Defects = [
@@ -353,28 +410,28 @@ export const QuestionBank: React.FC = () => {
           label: 'Zone #1',
           correctTerm: r2Zone1Term.trim(),
           correctImageId: r2Zone1Match,
-          imageUrl: imgMap[r2Zone1Match] || r2Zone1Image.trim()
+          imageUrl: imgMap[r2Zone1Match] || finalImgA
         },
         {
           id: '2',
           label: 'Zone #2',
           correctTerm: r2Zone2Term.trim(),
           correctImageId: r2Zone2Match,
-          imageUrl: imgMap[r2Zone2Match] || r2Zone2Image.trim()
+          imageUrl: imgMap[r2Zone2Match] || finalImgB || finalImgA
         },
         {
           id: '3',
           label: 'Zone #3',
           correctTerm: r2Zone3Term.trim(),
           correctImageId: r2Zone3Match,
-          imageUrl: imgMap[r2Zone3Match] || r2Zone3Image.trim()
+          imageUrl: imgMap[r2Zone3Match] || finalImgC || finalImgA
         },
         {
           id: '4',
           label: 'Zone #4',
           correctTerm: r2Zone4Term.trim(),
           correctImageId: r2Zone4Match,
-          imageUrl: imgMap[r2Zone4Match] || r2Zone4Image.trim()
+          imageUrl: imgMap[r2Zone4Match] || finalImgD || finalImgA
         }
       ];
 
@@ -384,8 +441,7 @@ export const QuestionBank: React.FC = () => {
       if (scrambled.every((v, i) => v === correctKey[i])) {
         scrambled = [scrambled[1], scrambled[0], scrambled[3], scrambled[2]];
       }
-      payload.round2InitialOrder = scrambled;
-      payload.round2ImageUrl = imgMap[r2Zone1Match] || r2Zone1Image.trim();
+      payload.round2InitialOrder = existingQ?.round2InitialOrder?.length === 4 ? existingQ.round2InitialOrder : scrambled;
       payload.round2TermOptions = allTerms;
     }
 
@@ -606,27 +662,26 @@ export const QuestionBank: React.FC = () => {
                             {d.correctTerm}
                           </span>
                         </div>
-                        {d.imageUrl ? (
-                          <div className="h-20 rounded-lg overflow-hidden border border-slate-800 bg-black/40 flex items-center justify-center">
-                            <img
-                              src={getFullImageUrl(d.imageUrl)}
-                              alt={d.label}
-                              className="w-full h-full object-contain"
-                            />
-                          </div>
-                        ) : q.round2ImageUrl ? (
-                          <div className="h-20 rounded-lg overflow-hidden border border-slate-800 bg-black/40 flex items-center justify-center">
-                            <img
-                              src={getFullImageUrl(q.round2ImageUrl)}
-                              alt="Defect"
-                              className="w-full h-full object-contain"
-                            />
-                          </div>
-                        ) : (
-                          <div className="h-16 rounded-lg bg-slate-900 text-slate-500 text-[10px] flex items-center justify-center">
-                            No image
-                          </div>
-                        )}
+                        {(() => {
+                          const imgUrl =
+                            d.imageUrl ||
+                            (d.correctImageId && q.round2Images?.find(i => i.id === d.correctImageId)?.imageUrl) ||
+                            q.round2ImageUrl;
+
+                          return imgUrl ? (
+                            <div className="h-20 rounded-lg overflow-hidden border border-slate-800 bg-black/40 flex items-center justify-center">
+                              <img
+                                src={getFullImageUrl(imgUrl)}
+                                alt={d.label}
+                                className="w-full h-full object-contain"
+                              />
+                            </div>
+                          ) : (
+                            <div className="h-16 rounded-lg bg-slate-900 text-slate-500 text-[10px] flex items-center justify-center">
+                              No image
+                            </div>
+                          );
+                        })()}
                       </div>
                     ))}
                   </div>
