@@ -7,6 +7,7 @@ import { Round2DefectMatch } from '../rounds/Round2DefectMatch';
 import { Round3MSQ } from '../rounds/Round3MSQ';
 import { AnswerRevealCard } from '../rounds/AnswerRevealCard';
 import { AnswerRevealModal } from '../common/AnswerRevealModal';
+import { RoundScoreBreakdown } from './RoundScoreBreakdown';
 import { Users, Clock, Trophy, RefreshCw, Radio, Sparkles, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -46,6 +47,12 @@ export const TeamLobby: React.FC = () => {
     submissionResponse.answerData !== null &&
     !submissionResponse.isTimeout
   );
+
+  const completedRounds = Array.from(
+    new Set((gameState?.completedQuestions || []).map(cq => Number(cq.round)))
+  );
+  const activeOrCompletedRound =
+    gameState?.currentRound || (completedRounds.length > 0 ? Math.max(...completedRounds) : 1);
 
   // Automatically pop up modal ONLY during a LIVE answer reveal if this team submitted,
   // NEVER on browser screen refresh or if already viewed/dismissed.
@@ -363,6 +370,15 @@ export const TeamLobby: React.FC = () => {
               </Link>
             </div>
           </div>
+        )}
+
+        {/* Individual Round Scores Section: Shown when a round completes or in waiting / revealed states */}
+        {(completedRounds.length > 0 || isQuestionRevealed || !isQuestionActive) && (
+          <RoundScoreBreakdown
+            currentTeamId={team.teamId}
+            defaultRound={activeOrCompletedRound}
+            completedRounds={completedRounds}
+          />
         )}
       </div>
       {/* Official Answer & Solution Reveal Modal */}

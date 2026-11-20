@@ -15,13 +15,16 @@ import {
 import { Link } from 'react-router-dom';
 import { api } from '../../services/api';
 import { useGame } from '../../context/GameContext';
-import { Question, Team, CompetitionSettings } from '../../types';
+import { Question, Team, CompetitionSettings, LeaderboardEntry } from '../../types';
 import { Timer } from '../common/Timer';
 import { AnswerRevealModal } from '../common/AnswerRevealModal';
+import { RoundScoreBreakdown } from '../participant/RoundScoreBreakdown';
 
 export const LiveControlRoom: React.FC = () => {
   const { gameState, fetchGameState, remainingSeconds } = useGame();
   const [settings, setSettings] = useState<CompetitionSettings | null>(null);
+  const [leaderboardList, setLeaderboardList] = useState<LeaderboardEntry[]>([]);
+  const [rightColTab, setRightColTab] = useState<'responses' | 'roundScores'>('responses');
   const [selectedRound, setSelectedRound] = useState<number>(gameState?.currentRound || 1);
   const [selectedQuestionNum, setSelectedQuestionNum] = useState<number>(gameState?.currentQuestionNumber || 1);
   const [currentQuestionData, setCurrentQuestionData] = useState<Question | null>(null);
@@ -41,6 +44,7 @@ export const LiveControlRoom: React.FC = () => {
     try {
       const res = await api.getLeaderboard();
       if (res.success && res.leaderboard) {
+        setLeaderboardList(res.leaderboard);
         const scoreMap: Record<string, number> = {};
         res.leaderboard.forEach((item: any) => {
           if (item.teamMongoId) scoreMap[item.teamMongoId] = item.totalScore;
@@ -795,92 +799,170 @@ export const LiveControlRoom: React.FC = () => {
             </div>
           </div>
 
-          {/* Submissions Team Status List */}
+          {/* Submissions & Round Scores Tab Panel */}
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                Team Responses:
-              </span>
+            <div className="flex items-center justify-between gap-2 border-b border-slate-800 pb-2">
+              <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setRightColTab('responses')}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                    rightColTab === 'responses'
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Q{selectedQuestionNum} Responses
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRightColTab('roundScores')}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                    rightColTab === 'roundScores'
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Round {selectedRound} Scores
+                </button>
+              </div>
+
               <button
                 type="button"
                 onClick={handleManualRefresh}
-                className="text-[11px] text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+                className="text-[11px] text-indigo-400 hover:text-indigo-300 flex items-center gap-1 shrink-0"
               >
                 <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
                 <span>Refresh</span>
               </button>
             </div>
 
-            <div className="max-h-64 overflow-y-auto space-y-1.5 pr-1">
-              {approvedTeams.length === 0 ? (
-                <p className="text-xs text-slate-500 text-center py-4">No registered teams yet.</p>
-              ) : (
-                approvedTeams.map(t => {
-                  const sub = liveSubmissions.find(
-                    s => s.teamId?.teamId === t.teamId || s.teamId === t.teamId || s.teamId?._id === t._id
-                  );
-                  const isEvaluated = isSelectedCompleted || isCurrentRevealed || sub?.isEvaluated;
-                  const questionScore = sub?.scoreResult?.totalScore;
-                  const teamTotalScore = teamScoresMap[t._id] ?? teamScoresMap[t.teamId] ?? 0;
+            {rightColTab === 'responses' ? (
+              <div className="max-h-64 overflow-y-auto space-y-1.5 pr-1">
+                {approvedTeams.length === 0 ? (
+                  <p className="text-xs text-slate-500 text-center py-4">No registered teams yet.</p>
+                ) : (
+                  approvedTeams.map(t => {
+                    const sub = liveSubmissions.find(
+                      s => s.teamId?.teamId === t.teamId || s.teamId === t.teamId || s.teamId?._id === t._id
+                    );
+                    const isEvaluated = isSelectedCompleted || isCurrentRevealed || sub?.isEvaluated;
+                    const questionScore = sub?.scoreResult?.totalScore;
+                    const teamTotalScore = teamScoresMap[t._id] ?? teamScoresMap[t.teamId] ?? 0;
 
-                  return (
-                    <div
-                      key={t._id}
-                      className={`py-2 px-3 rounded-xl border flex items-center justify-between text-xs transition-colors ${
-                        isEvaluated && questionScore !== undefined && questionScore > 0
-                          ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-200'
-                          : isEvaluated && questionScore !== undefined && questionScore < 0
-                          ? 'bg-red-950/30 border-red-500/40 text-red-200'
-                          : sub
-                          ? 'bg-emerald-950/20 border-emerald-500/30 text-emerald-300'
-                          : 'bg-slate-900/40 border-slate-800 text-slate-400'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="font-mono font-bold text-slate-400 shrink-0">{t.teamId}</span>
-                        <span className="font-semibold text-white truncate max-w-[130px]">{t.teamName}</span>
-                      </div>
+                    return (
+                      <div
+                        key={t._id}
+                        className={`py-2 px-3 rounded-xl border flex items-center justify-between text-xs transition-colors ${
+                          isEvaluated && questionScore !== undefined && questionScore > 0
+                            ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-200'
+                            : isEvaluated && questionScore !== undefined && questionScore < 0
+                            ? 'bg-red-950/30 border-red-500/40 text-red-200'
+                            : sub
+                            ? 'bg-emerald-950/20 border-emerald-500/30 text-emerald-300'
+                            : 'bg-slate-900/40 border-slate-800 text-slate-400'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="font-mono font-bold text-slate-400 shrink-0">{t.teamId}</span>
+                          <span className="font-semibold text-white truncate max-w-[130px]">{t.teamName}</span>
+                        </div>
 
-                      <div className="flex items-center gap-2 shrink-0">
-                        {isEvaluated ? (
-                          <>
-                            {questionScore !== undefined ? (
-                              <span
-                                className={`font-mono font-black text-xs px-2 py-0.5 rounded-lg border ${
-                                  questionScore > 0
-                                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                                    : questionScore < 0
-                                    ? 'bg-red-500/20 text-red-300 border-red-500/40'
-                                    : 'bg-slate-800 text-slate-400 border-slate-700'
-                                }`}
-                              >
-                                {questionScore > 0 ? `+${questionScore}` : questionScore} PTS
-                              </span>
-                            ) : (
-                              <span className="text-[11px] font-mono text-slate-500">0 PTS</span>
-                            )}
-                          </>
-                        ) : sub ? (
-                          <span className="font-mono font-bold text-emerald-400 flex items-center gap-1">
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>{sub.submissionTimeSeconds ?? '—'}s</span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {isEvaluated ? (
+                            <>
+                              {questionScore !== undefined ? (
+                                <span
+                                  className={`font-mono font-black text-xs px-2 py-0.5 rounded-lg border ${
+                                    questionScore > 0
+                                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                                      : questionScore < 0
+                                      ? 'bg-red-500/20 text-red-300 border-red-500/40'
+                                      : 'bg-slate-800 text-slate-400 border-slate-700'
+                                  }`}
+                                >
+                                  {questionScore > 0 ? `+${questionScore}` : questionScore} PTS
+                                </span>
+                              ) : (
+                                <span className="text-[11px] font-mono text-slate-500">0 PTS</span>
+                              )}
+                            </>
+                          ) : sub ? (
+                            <span className="font-mono font-bold text-emerald-400 flex items-center gap-1">
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>{sub.submissionTimeSeconds ?? '—'}s</span>
+                            </span>
+                          ) : (
+                            <span className="text-[11px] text-slate-500 italic">Thinking...</span>
+                          )}
+
+                          <span className="font-mono text-[11px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-lg">
+                            Total: {teamTotalScore}
                           </span>
-                        ) : (
-                          <span className="text-[11px] text-slate-500 italic">Thinking...</span>
-                        )}
-
-                        <span className="font-mono text-[11px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-lg">
-                          Total: {teamTotalScore}
-                        </span>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
+                    );
+                  })
+                )}
+              </div>
+            ) : (
+              /* Round Scores Tab for Quizmaster */
+              <div className="max-h-64 overflow-y-auto space-y-1.5 pr-1">
+                {leaderboardList.length === 0 ? (
+                  <p className="text-xs text-slate-500 text-center py-4">No scores recorded yet.</p>
+                ) : (
+                  [...leaderboardList]
+                    .sort((a, b) => {
+                      const sa = selectedRound === 1 ? a.round1Score : selectedRound === 2 ? a.round2Score : a.round3Score;
+                      const sb = selectedRound === 1 ? b.round1Score : selectedRound === 2 ? b.round2Score : b.round3Score;
+                      return (sb ?? 0) - (sa ?? 0);
+                    })
+                    .map((item, idx) => {
+                      const rScore = selectedRound === 1 ? item.round1Score : selectedRound === 2 ? item.round2Score : item.round3Score;
+                      return (
+                        <div
+                          key={item.teamId}
+                          className="py-2 px-3 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center justify-between text-xs"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="w-5 h-5 rounded-lg bg-slate-800 text-slate-400 font-bold flex items-center justify-center text-[10px] shrink-0">
+                              #{idx + 1}
+                            </span>
+                            <span className="font-mono font-bold text-slate-400 shrink-0">{item.teamId}</span>
+                            <span className="font-semibold text-white truncate max-w-[120px]">{item.teamName}</span>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span
+                              className={`font-mono font-black text-xs px-2 py-0.5 rounded-lg border ${
+                                (rScore ?? 0) > 0
+                                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                                  : (rScore ?? 0) < 0
+                                  ? 'bg-red-500/20 text-red-300 border-red-500/40'
+                                  : 'bg-slate-800 text-slate-400 border-slate-700'
+                              }`}
+                            >
+                              {(rScore ?? 0) > 0 ? `+${rScore}` : rScore ?? 0} PTS
+                            </span>
+                            <span className="font-mono text-[11px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-lg">
+                              Total: {item.totalScore}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Round Individual Scores Matrix */}
+      <RoundScoreBreakdown
+        defaultRound={selectedRound}
+        title={`Round ${selectedRound} Participant Leaderboard & Points Matrix`}
+      />
 
       {/* Reset Confirmation Modal */}
       {isResetConfirmOpen && (
