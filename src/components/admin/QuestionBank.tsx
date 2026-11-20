@@ -56,6 +56,7 @@ export const QuestionBank: React.FC = () => {
 
   const loadQuestions = async (round: number) => {
     try {
+      loadSettings();
       const res = await api.getQuestions(round);
       if (res.success && res.questions) {
         setQuestions(res.questions);
@@ -136,7 +137,7 @@ export const QuestionBank: React.FC = () => {
     setFormQuestionNum(q.questionNumber);
     setFormPrompt(q.prompt);
     setFormDescription(q.description || '');
-    setFormTimer(q.timerSeconds || getRoundDefaultTimer(q.round));
+    setFormTimer(getRoundDefaultTimer(q.round));
 
     // R1
     if (q.round === 1) {
@@ -298,9 +299,19 @@ export const QuestionBank: React.FC = () => {
     }
 
     try {
+      const newTimer = Number(formTimer);
       if (editingId) {
         const res = await api.updateQuestion(editingId, payload);
         if (res.success) {
+          if (newTimer > 0) {
+            const settingKey = formRound === 1 ? 'round1Timer' : formRound === 2 ? 'round2Timer' : 'round3Timer';
+            try {
+              await api.updateSettings({ [settingKey]: newTimer });
+              setSettings(prev => prev ? { ...prev, [settingKey]: newTimer } : prev);
+            } catch {
+              // ignore
+            }
+          }
           setFeedback(`Question ${formQuestionNum} updated successfully.`);
           setIsModalOpen(false);
           loadQuestions(activeRound);
@@ -310,6 +321,15 @@ export const QuestionBank: React.FC = () => {
       } else {
         const res = await api.createQuestion(payload);
         if (res.success) {
+          if (newTimer > 0) {
+            const settingKey = formRound === 1 ? 'round1Timer' : formRound === 2 ? 'round2Timer' : 'round3Timer';
+            try {
+              await api.updateSettings({ [settingKey]: newTimer });
+              setSettings(prev => prev ? { ...prev, [settingKey]: newTimer } : prev);
+            } catch {
+              // ignore
+            }
+          }
           setFeedback(`Question ${formQuestionNum} created successfully.`);
           setIsModalOpen(false);
           loadQuestions(activeRound);
@@ -426,7 +446,7 @@ export const QuestionBank: React.FC = () => {
                     {q.round === 1 ? 'Fastest Finger Sequence' : q.round === 2 ? 'Defect Image Match' : 'Quality MSQ'}
                   </span>
                   <span className="text-xs px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-300 font-mono">
-                    ⏱️ {q.timerSeconds}s
+                    ⏱️ {getRoundDefaultTimer(q.round)}s
                   </span>
                 </div>
 
