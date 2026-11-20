@@ -329,40 +329,44 @@ export const AnswerRevealModal: React.FC<AnswerRevealModalProps> = ({
                   Correct Defect Identification &amp; Mapping:
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {question.round2Defects.map(d => (
-                    <div
-                      key={d.id}
-                      className="p-3 rounded-xl bg-slate-900 border border-emerald-500/40 space-y-2 transition-transform hover:scale-[1.01]"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-                          <span className="w-2 h-2 rounded-full bg-cyan-400" />
-                          {d.label}
-                        </span>
-                        <span className="text-xs font-black text-emerald-300 bg-emerald-500/20 px-2.5 py-0.5 rounded-lg border border-emerald-500/40 flex items-center gap-1">
-                          <Check className="w-3.5 h-3.5 text-emerald-400" />
-                          {d.correctTerm}
-                        </span>
+                  {question.round2Defects.map(d => {
+                    const correctMatchingImg =
+                      (d.correctImageId && question.round2Images?.find(i => i.id === d.correctImageId)?.imageUrl) ||
+                      d.imageUrl ||
+                      '';
+
+                    return (
+                      <div
+                        key={d.id}
+                        className="p-3 rounded-xl bg-slate-900 border border-emerald-500/40 space-y-2 transition-transform hover:scale-[1.01]"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-cyan-400" />
+                            {d.label}
+                          </span>
+                          <span className="text-xs font-black text-emerald-300 bg-emerald-500/20 px-2.5 py-0.5 rounded-lg border border-emerald-500/40 flex items-center gap-1">
+                            <Check className="w-3.5 h-3.5 text-emerald-400" />
+                            {d.correctTerm}
+                          </span>
+                        </div>
+
+                        {correctMatchingImg ? (
+                          <div className="h-24 rounded-lg overflow-hidden border border-slate-800 bg-black/50 flex items-center justify-center">
+                            <img
+                              src={getFullImageUrl(correctMatchingImg)}
+                              alt={d.correctTerm}
+                              className="w-full h-full object-contain"
+                            />
+                          </div>
+                        ) : null}
+
+                        <div className="text-center text-[10px] text-emerald-400 font-bold bg-emerald-500/10 py-0.5 rounded border border-emerald-500/20">
+                          Correct Match: Image [{d.correctImageId || 'A'}]
+                        </div>
                       </div>
-                      {d.imageUrl ? (
-                        <div className="h-24 rounded-lg overflow-hidden border border-slate-800 bg-black/50 flex items-center justify-center">
-                          <img
-                            src={getFullImageUrl(d.imageUrl)}
-                            alt={d.correctTerm}
-                            className="w-full h-full object-contain"
-                          />
-                        </div>
-                      ) : d.correctImageId && question.round2Images ? (
-                        <div className="h-24 rounded-lg overflow-hidden border border-slate-800 bg-black/50 flex items-center justify-center">
-                          <img
-                            src={getFullImageUrl(question.round2Images.find(i => i.id === d.correctImageId)?.imageUrl)}
-                            alt={d.correctTerm}
-                            className="w-full h-full object-contain"
-                          />
-                        </div>
-                      ) : null}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}

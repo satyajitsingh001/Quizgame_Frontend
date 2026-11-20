@@ -512,35 +512,35 @@ export const LiveControlRoom: React.FC = () => {
                 </div>
               </div>
 
-              {/* Round 2 Question Presentation (Shows Scrambled Arrangement as seen by Participants) */}
+              {/* Round 2 Question Presentation (Shows Target Zones with Configured Images & Answer Key Sequence) */}
               {currentQuestionData.round === 2 && (
                 <div className="rounded-2xl overflow-hidden border border-slate-700 bg-slate-950 p-4 space-y-3 shadow-xl">
                   <div className="flex items-center justify-between text-xs font-bold text-slate-300 flex-wrap gap-2">
                     <span className="flex items-center gap-1.5 text-cyan-400 uppercase tracking-wider">
                       <Eye className="w-4 h-4" />
-                      Live Participant View: Scrambled Image Layout
+                      Round 2 Target Zones &amp; Configured Images
                     </span>
-                    <span className="text-[11px] text-amber-400 font-semibold bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
-                      Scrambled layout matching participant screen
+                    <span className="text-[11px] text-emerald-400 font-semibold bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                      Images as configured • Correct sequence per answer key
                     </span>
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {currentQuestionData.round2Defects?.map((d, slotIdx) => {
-                      // Determine the image placed into this slot initially
-                      const initialImgId = currentQuestionData.round2InitialOrder?.[slotIdx];
-                      const scrambledImgUrl =
-                        (initialImgId && currentQuestionData.round2Images?.find(i => i.id === initialImgId)?.imageUrl) ||
+                      const letters = ['A', 'B', 'C', 'D'];
+                      const zoneLetter = letters[slotIdx] || String(slotIdx + 1);
+                      // As configured for this zone:
+                      const zoneImgUrl =
                         d.imageUrl ||
-                        currentQuestionData.round2ImageUrl ||
+                        currentQuestionData.round2Images?.find(i => i.id === zoneLetter)?.imageUrl ||
                         null;
 
                       return (
                         <div
                           key={d.id}
                           onClick={() => {
-                            if (scrambledImgUrl) {
-                              setZoomImageSrc(scrambledImgUrl);
+                            if (zoneImgUrl) {
+                              setZoomImageSrc(zoneImgUrl);
                               setIsR2ImageZoomed(true);
                             }
                           }}
@@ -553,11 +553,11 @@ export const LiveControlRoom: React.FC = () => {
                             </span>
                           </div>
 
-                          {scrambledImgUrl ? (
+                          {zoneImgUrl ? (
                             <div className="h-28 rounded-lg overflow-hidden border border-slate-800 bg-black/50 flex items-center justify-center relative">
                               <img
-                                src={getFullImageUrl(scrambledImgUrl)}
-                                alt={`Slot ${slotIdx + 1} Image`}
+                                src={getFullImageUrl(zoneImgUrl)}
+                                alt={`${d.label} Image`}
                                 className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-200"
                               />
                               <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -570,8 +570,11 @@ export const LiveControlRoom: React.FC = () => {
                             </div>
                           )}
 
-                          <div className="text-center text-[10px] text-slate-400 font-medium">
-                            {initialImgId ? `Image [${initialImgId}] in Slot #${slotIdx + 1}` : `Slot #${slotIdx + 1}`}
+                          <div className="flex items-center justify-between text-[10px] font-medium pt-0.5">
+                            <span className="text-slate-400">Image [{zoneLetter}]</span>
+                            <span className="text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                              Key: [{d.correctImageId || zoneLetter}]
+                            </span>
                           </div>
                         </div>
                       );

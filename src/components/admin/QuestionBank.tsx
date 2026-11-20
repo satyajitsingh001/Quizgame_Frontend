@@ -185,7 +185,7 @@ export const QuestionBank: React.FC = () => {
       setR2Zone3Term(z3?.correctTerm || '');
       setR2Zone4Term(z4?.correctTerm || '');
 
-      // Load images from round2Images, defects, or main image fallback so NO image is lost
+      // Load each zone's specific image independently so images are never duplicated across zones
       const imgA =
         q.round2Images?.find(i => i.id === 'A')?.imageUrl ||
         z1?.imageUrl ||
@@ -196,19 +196,19 @@ export const QuestionBank: React.FC = () => {
         q.round2Images?.find(i => i.id === 'B')?.imageUrl ||
         z2?.imageUrl ||
         (q.round2Defects && q.round2Defects[1]?.imageUrl) ||
-        existingMainImg;
+        '';
 
       const imgC =
         q.round2Images?.find(i => i.id === 'C')?.imageUrl ||
         z3?.imageUrl ||
         (q.round2Defects && q.round2Defects[2]?.imageUrl) ||
-        existingMainImg;
+        '';
 
       const imgD =
         q.round2Images?.find(i => i.id === 'D')?.imageUrl ||
         z4?.imageUrl ||
         (q.round2Defects && q.round2Defects[3]?.imageUrl) ||
-        existingMainImg;
+        '';
 
       setR2Zone1Image(imgA);
       setR2Zone2Image(imgB);
@@ -275,7 +275,6 @@ export const QuestionBank: React.FC = () => {
         else if (zoneId === '2') setR2Zone2Image(res.imageUrl);
         else if (zoneId === '3') setR2Zone3Image(res.imageUrl);
         else if (zoneId === '4') setR2Zone4Image(res.imageUrl);
-        if (!r2ImageUrl) setR2ImageUrl(res.imageUrl);
         setFeedback(`Zone #${zoneId} image uploaded successfully!`);
       } else {
         setErrorMessage(`Failed to upload image for Zone #${zoneId}.`);
@@ -355,47 +354,35 @@ export const QuestionBank: React.FC = () => {
         ])
       );
 
-      // Retrieve the existing question record being edited (if any) so we NEVER drop existing images
+      // Retrieve the existing question record being edited (if any)
       const existingQ = editingId ? questions.find(q => q._id === editingId) : null;
 
-      const fallbackMainImg =
-        r2ImageUrl.trim() ||
-        r2Zone1Image.trim() ||
-        existingQ?.round2ImageUrl ||
-        '';
-
+      // Each zone's image is strictly independent (NEVER fall back to another zone's image)
       const finalImgA =
         r2Zone1Image.trim() ||
         existingQ?.round2Images?.find(i => i.id === 'A')?.imageUrl ||
         existingQ?.round2Defects?.find(d => d.id === '1')?.imageUrl ||
-        fallbackMainImg;
+        '';
 
       const finalImgB =
         r2Zone2Image.trim() ||
         existingQ?.round2Images?.find(i => i.id === 'B')?.imageUrl ||
         existingQ?.round2Defects?.find(d => d.id === '2')?.imageUrl ||
-        fallbackMainImg;
+        '';
 
       const finalImgC =
         r2Zone3Image.trim() ||
         existingQ?.round2Images?.find(i => i.id === 'C')?.imageUrl ||
         existingQ?.round2Defects?.find(d => d.id === '3')?.imageUrl ||
-        fallbackMainImg;
+        '';
 
       const finalImgD =
         r2Zone4Image.trim() ||
         existingQ?.round2Images?.find(i => i.id === 'D')?.imageUrl ||
         existingQ?.round2Defects?.find(d => d.id === '4')?.imageUrl ||
-        fallbackMainImg;
+        '';
 
-      const imgMap: Record<string, string> = {
-        'A': finalImgA,
-        'B': finalImgB,
-        'C': finalImgC,
-        'D': finalImgD
-      };
-
-      payload.round2ImageUrl = fallbackMainImg || finalImgA;
+      payload.round2ImageUrl = finalImgA || '';
 
       payload.round2Images = [
         { id: 'A', imageUrl: finalImgA },
@@ -410,28 +397,28 @@ export const QuestionBank: React.FC = () => {
           label: 'Zone #1',
           correctTerm: r2Zone1Term.trim(),
           correctImageId: r2Zone1Match,
-          imageUrl: imgMap[r2Zone1Match] || finalImgA
+          imageUrl: finalImgA
         },
         {
           id: '2',
           label: 'Zone #2',
           correctTerm: r2Zone2Term.trim(),
           correctImageId: r2Zone2Match,
-          imageUrl: imgMap[r2Zone2Match] || finalImgB || finalImgA
+          imageUrl: finalImgB
         },
         {
           id: '3',
           label: 'Zone #3',
           correctTerm: r2Zone3Term.trim(),
           correctImageId: r2Zone3Match,
-          imageUrl: imgMap[r2Zone3Match] || finalImgC || finalImgA
+          imageUrl: finalImgC
         },
         {
           id: '4',
           label: 'Zone #4',
           correctTerm: r2Zone4Term.trim(),
           correctImageId: r2Zone4Match,
-          imageUrl: imgMap[r2Zone4Match] || finalImgD || finalImgA
+          imageUrl: finalImgD
         }
       ];
 
