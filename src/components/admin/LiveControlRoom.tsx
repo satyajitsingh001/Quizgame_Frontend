@@ -512,109 +512,73 @@ export const LiveControlRoom: React.FC = () => {
                 </div>
               </div>
 
-              {/* Round 2 Defect Image Inspection Display (Supports both 4-image grid and single image) */}
-              {currentQuestionData.round === 2 && currentQuestionData.round2Defects && currentQuestionData.round2Defects.some(d => d.imageUrl) ? (
+              {/* Round 2 Question Presentation (Shows Scrambled Arrangement as seen by Participants) */}
+              {currentQuestionData.round === 2 && (
                 <div className="rounded-2xl overflow-hidden border border-slate-700 bg-slate-950 p-4 space-y-3 shadow-xl">
-                  <div className="flex items-center justify-between text-xs font-bold text-slate-300">
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-300 flex-wrap gap-2">
                     <span className="flex items-center gap-1.5 text-cyan-400 uppercase tracking-wider">
                       <Eye className="w-4 h-4" />
-                      Round 2 Target Zones &amp; Correct Images (4 Items):
+                      Live Participant View: Scrambled Image Layout
                     </span>
-                    <span className="text-[11px] text-slate-400">
-                      Click any image to enlarge
+                    <span className="text-[11px] text-amber-400 font-semibold bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
+                      Scrambled layout matching participant screen
                     </span>
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    {currentQuestionData.round2Defects.map(d => (
-                      <div
-                        key={d.id}
-                        onClick={() => {
-                          if (d.imageUrl) {
-                            setZoomImageSrc(d.imageUrl);
-                            setIsR2ImageZoomed(true);
-                          }
-                        }}
-                        className="p-3 rounded-xl bg-slate-900 border border-slate-800 hover:border-cyan-500/50 transition-all cursor-pointer group space-y-2"
-                      >
-                        <div className="flex items-center justify-between text-[11px]">
-                          <span className="text-cyan-400 font-bold uppercase">{d.label}</span>
-                          <span className="font-black text-white bg-indigo-500/20 px-2 py-0.5 rounded border border-indigo-500/30 truncate max-w-[100px]">
-                            {d.correctTerm}
-                          </span>
-                        </div>
-                        {d.imageUrl ? (
-                          <div className="h-28 rounded-lg overflow-hidden border border-slate-800 bg-black/50 flex items-center justify-center relative">
-                            <img
-                              src={getFullImageUrl(d.imageUrl)}
-                              alt={d.correctTerm}
-                              className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-200"
-                            />
-                            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                              <Maximize2 className="w-4 h-4 text-cyan-300" />
+                    {currentQuestionData.round2Defects?.map((d, slotIdx) => {
+                      // Determine the image placed into this slot initially
+                      const initialImgId = currentQuestionData.round2InitialOrder?.[slotIdx];
+                      const scrambledImgUrl =
+                        (initialImgId && currentQuestionData.round2Images?.find(i => i.id === initialImgId)?.imageUrl) ||
+                        d.imageUrl ||
+                        currentQuestionData.round2ImageUrl ||
+                        null;
+
+                      return (
+                        <div
+                          key={d.id}
+                          onClick={() => {
+                            if (scrambledImgUrl) {
+                              setZoomImageSrc(scrambledImgUrl);
+                              setIsR2ImageZoomed(true);
+                            }
+                          }}
+                          className="p-3 rounded-xl bg-slate-900 border border-slate-800 hover:border-cyan-500/50 transition-all cursor-pointer group space-y-2"
+                        >
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="text-cyan-400 font-bold uppercase">{d.label}</span>
+                            <span className="font-black text-white bg-indigo-500/20 px-2 py-0.5 rounded border border-indigo-500/30 truncate max-w-[100px]">
+                              {d.correctTerm}
+                            </span>
+                          </div>
+
+                          {scrambledImgUrl ? (
+                            <div className="h-28 rounded-lg overflow-hidden border border-slate-800 bg-black/50 flex items-center justify-center relative">
+                              <img
+                                src={getFullImageUrl(scrambledImgUrl)}
+                                alt={`Slot ${slotIdx + 1} Image`}
+                                className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-200"
+                              />
+                              <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                <Maximize2 className="w-4 h-4 text-cyan-300" />
+                              </div>
                             </div>
+                          ) : (
+                            <div className="h-28 rounded-lg bg-slate-950 text-slate-500 text-[10px] flex items-center justify-center">
+                              No image
+                            </div>
+                          )}
+
+                          <div className="text-center text-[10px] text-slate-400 font-medium">
+                            {initialImgId ? `Image [${initialImgId}] in Slot #${slotIdx + 1}` : `Slot #${slotIdx + 1}`}
                           </div>
-                        ) : (
-                          <div className="h-28 rounded-lg bg-slate-950 text-slate-500 text-[10px] flex items-center justify-center">
-                            No image
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
-              ) : currentQuestionData.round === 2 && currentQuestionData.round2ImageUrl ? (
-                <div className="rounded-2xl overflow-hidden border border-slate-700 bg-slate-950 p-3 space-y-2.5 shadow-xl">
-                  <div className="flex items-center justify-between px-1 text-xs font-bold text-slate-300">
-                    <span className="flex items-center gap-1.5 text-cyan-400">
-                      <Eye className="w-4 h-4" />
-                      Defect Inspection Image
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setZoomImageSrc(currentQuestionData.round2ImageUrl || null);
-                        setIsR2ImageZoomed(true);
-                      }}
-                      className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-semibold flex items-center gap-1.5 transition-colors border border-slate-700"
-                    >
-                      <Maximize2 className="w-3.5 h-3.5 text-indigo-400" />
-                      Enlarge / Zoom
-                    </button>
-                  </div>
-                  <div
-                    className="relative flex items-center justify-center bg-black/60 rounded-xl overflow-hidden cursor-pointer group p-1"
-                    onClick={() => {
-                      setZoomImageSrc(currentQuestionData.round2ImageUrl || null);
-                      setIsR2ImageZoomed(true);
-                    }}
-                  >
-                    <img
-                      src={getFullImageUrl(currentQuestionData.round2ImageUrl)}
-                      alt="Round 2 Defect"
-                      className="w-full max-h-[340px] object-contain mx-auto rounded-xl transition-transform duration-200 group-hover:scale-[1.01]"
-                    />
-                    <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-                      <span className="px-3.5 py-1.5 rounded-xl bg-slate-900/95 text-white text-xs font-bold border border-slate-700 flex items-center gap-2 shadow-2xl">
-                        <Maximize2 className="w-3.5 h-3.5 text-cyan-400" /> Click to Zoom
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ) : currentQuestionData.round === 2 ? (
-                <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-xs text-amber-300">
-                  <div className="flex items-center gap-2">
-                    <AlertTriangle className="w-4 h-4 shrink-0 text-amber-400" />
-                    <span>No defect images uploaded for this question yet.</span>
-                  </div>
-                  <Link
-                    to="/admin/questions"
-                    className="px-3 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 font-bold text-amber-200 border border-amber-500/40"
-                  >
-                    Upload in Question Bank
-                  </Link>
-                </div>
-              ) : null}
+              )}
 
               {/* If completed, show the official answer clearly below the question */}
               {isSelectedCompleted && (
@@ -656,16 +620,34 @@ export const LiveControlRoom: React.FC = () => {
                   {/* Round 2 Answer Defects */}
                   {currentQuestionData.round === 2 && currentQuestionData.round2Defects && (
                     <div className="space-y-2">
-                      <span className="text-xs text-slate-300 font-bold block">Correct Defect Mappings:</span>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                        {currentQuestionData.round2Defects.map(d => (
-                          <div key={d.id} className="p-2.5 rounded-xl bg-slate-900 border border-emerald-500/40 flex items-center justify-between gap-2">
-                            <span className="font-bold text-slate-300">{d.label}</span>
-                            <span className="font-black text-emerald-300 bg-emerald-500/20 px-2.5 py-0.5 rounded border border-emerald-500/30">
-                              {d.correctTerm}
-                            </span>
-                          </div>
-                        ))}
+                      <span className="text-xs text-slate-300 font-bold block">Correct Defect Mappings &amp; Official Images (Answer Key):</span>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+                        {currentQuestionData.round2Defects.map(d => {
+                          const correctImgUrl =
+                            d.imageUrl ||
+                            (d.correctImageId && currentQuestionData.round2Images?.find(i => i.id === d.correctImageId)?.imageUrl) ||
+                            null;
+
+                          return (
+                            <div key={d.id} className="p-2.5 rounded-xl bg-slate-900 border border-emerald-500/40 space-y-1.5">
+                              <div className="flex items-center justify-between text-[11px]">
+                                <span className="font-bold text-slate-300">{d.label}</span>
+                                <span className="font-black text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded border border-emerald-500/30 truncate max-w-[100px]">
+                                  {d.correctTerm}
+                                </span>
+                              </div>
+                              {correctImgUrl && (
+                                <div className="h-20 rounded-lg overflow-hidden border border-slate-800 bg-black/40 flex items-center justify-center">
+                                  <img
+                                    src={getFullImageUrl(correctImgUrl)}
+                                    alt={d.correctTerm}
+                                    className="w-full h-full object-contain"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}

@@ -35,18 +35,38 @@ export const Round2DefectMatch: React.FC<Round2DefectMatchProps> = ({ question, 
   // Click-to-swap selection state
   const [selectedSlotIndex, setSelectedSlotIndex] = useState<number | null>(null);
 
-  // Initialize and shuffle images when question loads
+  // Initialize images matching consistent round2InitialOrder when question loads
   useEffect(() => {
     if (defects.length > 0) {
-      const items: ImageSlotItem[] = defects.map(d => ({
-        id: d.id,
-        imageUrl: d.imageUrl || question.round2ImageUrl || '',
-        originalTerm: d.correctTerm
-      }));
+      // Build lookup of available images
+      const imageDict: Record<string, ImageSlotItem> = {};
 
-      // Randomly shuffle images so they are not in order
-      const shuffled = [...items].sort(() => Math.random() - 0.5);
-      setSlottedImages(shuffled);
+      if (question.round2Images && question.round2Images.length > 0) {
+        question.round2Images.forEach(img => {
+          imageDict[img.id] = { id: img.id, imageUrl: img.imageUrl };
+        });
+      } else {
+        defects.forEach(d => {
+          imageDict[d.id] = {
+            id: d.id,
+            imageUrl: d.imageUrl || question.round2ImageUrl || '',
+            originalTerm: d.correctTerm
+          };
+        });
+      }
+
+      // If round2InitialOrder is defined (consistent across admin live control and users):
+      if (question.round2InitialOrder && question.round2InitialOrder.length === defects.length) {
+        const ordered = question.round2InitialOrder.map(imgId => {
+          return imageDict[imgId] || { id: imgId, imageUrl: '' };
+        });
+        setSlottedImages(ordered);
+      } else {
+        // Fallback: randomized shuffle
+        const items = Object.values(imageDict);
+        const shuffled = [...items].sort(() => Math.random() - 0.5);
+        setSlottedImages(shuffled);
+      }
     }
   }, [question._id]);
 

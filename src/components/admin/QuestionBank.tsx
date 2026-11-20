@@ -49,6 +49,10 @@ export const QuestionBank: React.FC = () => {
   const [r2Zone2Image, setR2Zone2Image] = useState<string>('');
   const [r2Zone3Image, setR2Zone3Image] = useState<string>('');
   const [r2Zone4Image, setR2Zone4Image] = useState<string>('');
+  const [r2Zone1Match, setR2Zone1Match] = useState<string>('A');
+  const [r2Zone2Match, setR2Zone2Match] = useState<string>('B');
+  const [r2Zone3Match, setR2Zone3Match] = useState<string>('C');
+  const [r2Zone4Match, setR2Zone4Match] = useState<string>('D');
   const [uploadingZoneId, setUploadingZoneId] = useState<string | null>(null);
   const [r2ExtraTerms, setR2ExtraTerms] = useState<string>('');
 
@@ -127,6 +131,10 @@ export const QuestionBank: React.FC = () => {
     setR2Zone2Image('');
     setR2Zone3Image('');
     setR2Zone4Image('');
+    setR2Zone1Match('A');
+    setR2Zone2Match('B');
+    setR2Zone3Match('C');
+    setR2Zone4Match('D');
     setR2ExtraTerms('');
 
     // Reset R3
@@ -175,10 +183,20 @@ export const QuestionBank: React.FC = () => {
       setR2Zone3Term(z3?.correctTerm || '');
       setR2Zone4Term(z4?.correctTerm || '');
 
-      setR2Zone1Image(z1?.imageUrl || q.round2ImageUrl || '');
-      setR2Zone2Image(z2?.imageUrl || '');
-      setR2Zone3Image(z3?.imageUrl || '');
-      setR2Zone4Image(z4?.imageUrl || '');
+      const imgA = q.round2Images?.find(i => i.id === 'A')?.imageUrl || z1?.imageUrl || q.round2ImageUrl || '';
+      const imgB = q.round2Images?.find(i => i.id === 'B')?.imageUrl || z2?.imageUrl || '';
+      const imgC = q.round2Images?.find(i => i.id === 'C')?.imageUrl || z3?.imageUrl || '';
+      const imgD = q.round2Images?.find(i => i.id === 'D')?.imageUrl || z4?.imageUrl || '';
+
+      setR2Zone1Image(imgA);
+      setR2Zone2Image(imgB);
+      setR2Zone3Image(imgC);
+      setR2Zone4Image(imgD);
+
+      setR2Zone1Match(z1?.correctImageId || 'A');
+      setR2Zone2Match(z2?.correctImageId || 'B');
+      setR2Zone3Match(z3?.correctImageId || 'C');
+      setR2Zone4Match(z4?.correctImageId || 'D');
 
       const terms = q.round2TermOptions || [];
       setR2ExtraTerms(terms.join(', '));
@@ -315,13 +333,59 @@ export const QuestionBank: React.FC = () => {
         ])
       );
 
-      payload.round2ImageUrl = r2Zone1Image.trim() || r2ImageUrl.trim();
-      payload.round2Defects = [
-        { id: '1', label: 'Zone #1', correctTerm: r2Zone1Term.trim(), imageUrl: r2Zone1Image.trim() },
-        { id: '2', label: 'Zone #2', correctTerm: r2Zone2Term.trim(), imageUrl: r2Zone2Image.trim() },
-        { id: '3', label: 'Zone #3', correctTerm: r2Zone3Term.trim(), imageUrl: r2Zone3Image.trim() },
-        { id: '4', label: 'Zone #4', correctTerm: r2Zone4Term.trim(), imageUrl: r2Zone4Image.trim() }
+      const imgMap: Record<string, string> = {
+        'A': r2Zone1Image.trim(),
+        'B': r2Zone2Image.trim(),
+        'C': r2Zone3Image.trim(),
+        'D': r2Zone4Image.trim()
+      };
+
+      payload.round2Images = [
+        { id: 'A', imageUrl: r2Zone1Image.trim() },
+        { id: 'B', imageUrl: r2Zone2Image.trim() },
+        { id: 'C', imageUrl: r2Zone3Image.trim() },
+        { id: 'D', imageUrl: r2Zone4Image.trim() }
       ];
+
+      payload.round2Defects = [
+        {
+          id: '1',
+          label: 'Zone #1',
+          correctTerm: r2Zone1Term.trim(),
+          correctImageId: r2Zone1Match,
+          imageUrl: imgMap[r2Zone1Match] || r2Zone1Image.trim()
+        },
+        {
+          id: '2',
+          label: 'Zone #2',
+          correctTerm: r2Zone2Term.trim(),
+          correctImageId: r2Zone2Match,
+          imageUrl: imgMap[r2Zone2Match] || r2Zone2Image.trim()
+        },
+        {
+          id: '3',
+          label: 'Zone #3',
+          correctTerm: r2Zone3Term.trim(),
+          correctImageId: r2Zone3Match,
+          imageUrl: imgMap[r2Zone3Match] || r2Zone3Image.trim()
+        },
+        {
+          id: '4',
+          label: 'Zone #4',
+          correctTerm: r2Zone4Term.trim(),
+          correctImageId: r2Zone4Match,
+          imageUrl: imgMap[r2Zone4Match] || r2Zone4Image.trim()
+        }
+      ];
+
+      // Scrambled initial order for question presentation (consistent across Live Control and Participant Lobby)
+      let scrambled = ['A', 'B', 'C', 'D'].sort(() => 0.5 - Math.random());
+      const correctKey = [r2Zone1Match, r2Zone2Match, r2Zone3Match, r2Zone4Match];
+      if (scrambled.every((v, i) => v === correctKey[i])) {
+        scrambled = [scrambled[1], scrambled[0], scrambled[3], scrambled[2]];
+      }
+      payload.round2InitialOrder = scrambled;
+      payload.round2ImageUrl = imgMap[r2Zone1Match] || r2Zone1Image.trim();
       payload.round2TermOptions = allTerms;
     }
 
@@ -823,6 +887,40 @@ export const QuestionBank: React.FC = () => {
                         )}
                       </div>
                     ))}
+                  </div>
+
+                  {/* Correct Answer Key: Match each zone to its correct image */}
+                  <div className="pt-3 border-t border-slate-800 space-y-2">
+                    <label className="block text-xs font-bold uppercase text-slate-300">
+                      Set Correct Answer Key (Which image belongs to each target zone):
+                    </label>
+                    <p className="text-[11px] text-slate-400">
+                      Specify the correct image for each zone. The question will automatically be scrambled for participants to arrange.
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                      {[
+                        { label: 'Zone #1', name: r2Zone1Term, val: r2Zone1Match, set: setR2Zone1Match },
+                        { label: 'Zone #2', name: r2Zone2Term, val: r2Zone2Match, set: setR2Zone2Match },
+                        { label: 'Zone #3', name: r2Zone3Term, val: r2Zone3Match, set: setR2Zone3Match },
+                        { label: 'Zone #4', name: r2Zone4Term, val: r2Zone4Match, set: setR2Zone4Match }
+                      ].map((slot, idx) => (
+                        <div key={idx} className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
+                          <span className="text-[11px] font-bold text-cyan-400 block truncate">
+                            {slot.label}: <strong className="text-white">{slot.name || `Target #${idx + 1}`}</strong>
+                          </span>
+                          <select
+                            value={slot.val}
+                            onChange={e => slot.set(e.target.value)}
+                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs font-bold text-emerald-400 focus:outline-none"
+                          >
+                            <option value="A">Image [A] (Zone #1 Image)</option>
+                            <option value="B">Image [B] (Zone #2 Image)</option>
+                            <option value="C">Image [C] (Zone #3 Image)</option>
+                            <option value="D">Image [D] (Zone #4 Image)</option>
+                          </select>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}

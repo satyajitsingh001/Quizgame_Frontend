@@ -17,7 +17,13 @@ export interface Round2Defect {
   id: string; // '1', '2', '3', '4'
   label: string; // 'Zone #1'
   correctTerm?: string;
+  correctImageId?: string; // 'A', 'B', 'C', 'D'
   imageUrl?: string;
+}
+
+export interface Round2ImageItem {
+  id: string; // 'A', 'B', 'C', 'D'
+  imageUrl: string;
 }
 
 export interface Round3Option {
@@ -37,7 +43,9 @@ export interface Question {
   round1CorrectOrder?: string[];
   // Round 2
   round2ImageUrl?: string;
+  round2Images?: Round2ImageItem[];
   round2Defects?: Round2Defect[];
+  round2InitialOrder?: string[];
   round2TermOptions?: string[];
   // Round 3
   round3Options?: Round3Option[];

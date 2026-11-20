@@ -344,7 +344,7 @@ export const AnswerRevealModal: React.FC<AnswerRevealModalProps> = ({
                           {d.correctTerm}
                         </span>
                       </div>
-                      {d.imageUrl && (
+                      {d.imageUrl ? (
                         <div className="h-24 rounded-lg overflow-hidden border border-slate-800 bg-black/50 flex items-center justify-center">
                           <img
                             src={getFullImageUrl(d.imageUrl)}
@@ -352,7 +352,15 @@ export const AnswerRevealModal: React.FC<AnswerRevealModalProps> = ({
                             className="w-full h-full object-contain"
                           />
                         </div>
-                      )}
+                      ) : d.correctImageId && question.round2Images ? (
+                        <div className="h-24 rounded-lg overflow-hidden border border-slate-800 bg-black/50 flex items-center justify-center">
+                          <img
+                            src={getFullImageUrl(question.round2Images.find(i => i.id === d.correctImageId)?.imageUrl)}
+                            alt={d.correctTerm}
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+                      ) : null}
                     </div>
                   ))}
                 </div>
