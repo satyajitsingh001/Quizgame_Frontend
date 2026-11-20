@@ -19,7 +19,6 @@ export const AdminDashboard: React.FC = () => {
   const { gameState } = useGame();
   const [teamsCount, setTeamsCount] = useState(0);
   const [participantsCount, setParticipantsCount] = useState(0);
-  const [maxTeams, setMaxTeams] = useState(20);
   const [isRegOpen, setIsRegOpen] = useState(true);
   const [topTeams, setTopTeams] = useState<any[]>([]);
   const [isAdjusterOpen, setIsAdjusterOpen] = useState(false);
@@ -29,7 +28,6 @@ export const AdminDashboard: React.FC = () => {
       const setRes = await api.getSettings();
       if (setRes.success && setRes.settings) {
         setIsRegOpen(setRes.settings.isRegistrationOpen);
-        setMaxTeams(setRes.settings.maxTeams || 20);
       }
 
       const teamRes = await api.getAllTeams();
@@ -87,10 +85,10 @@ export const AdminDashboard: React.FC = () => {
         <div className="glass-card p-5 rounded-3xl border border-slate-800">
           <div className="flex items-center justify-between text-indigo-400 mb-2">
             <Users className="w-5 h-5" />
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Capacity</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Enrolled</span>
           </div>
-          <div className="text-2xl sm:text-3xl font-black text-white">{teamsCount} / {maxTeams}</div>
-          <p className="text-xs text-slate-400 mt-1">Registered Teams ({maxTeams - teamsCount} slots left)</p>
+          <div className="text-2xl sm:text-3xl font-black text-white">{teamsCount}</div>
+          <p className="text-xs text-slate-400 mt-1">Total Registered Participants</p>
         </div>
 
         {/* Total Participants */}

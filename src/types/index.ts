@@ -103,8 +103,8 @@ export interface LeaderboardEntry {
 export interface CompetitionSettings {
   competitionTitle: string;
   subTitle: string;
-  maxTeams: number;
-  teamSize: number;
+  maxTeams?: number;
+  teamSize?: number;
   isRegistrationOpen: boolean;
   requireApproval: boolean;
   round1Timer: number;

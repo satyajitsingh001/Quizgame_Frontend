@@ -73,7 +73,7 @@ export const QuestionBank: React.FC = () => {
     setFormRound(activeRound);
     // Suggest next question number
     const existingNums = questions.map(q => q.questionNumber);
-    const nextNum = [1, 2, 3, 4, 5].find(n => !existingNums.includes(n)) || 1;
+    const nextNum = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].find(n => !existingNums.includes(n)) || (existingNums.length > 0 ? Math.max(...existingNums) + 1 : 1);
     setFormQuestionNum(nextNum);
     setFormPrompt('');
     setFormDescription('');
@@ -530,7 +530,7 @@ export const QuestionBank: React.FC = () => {
                     onChange={e => setFormQuestionNum(Number(e.target.value))}
                     className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:outline-none font-mono"
                   >
-                    {[1, 2, 3, 4, 5].map(n => (
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
                       <option key={n} value={n}>Q{n}</option>
                     ))}
                   </select>

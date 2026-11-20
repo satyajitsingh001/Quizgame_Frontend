@@ -71,7 +71,7 @@ export const CompetitionSettingsView: React.FC = () => {
         <div className="glass-card p-6 rounded-3xl border border-slate-800 space-y-4">
           <h2 className="text-base font-bold text-white flex items-center gap-2">
             <Settings className="w-5 h-5 text-indigo-400" />
-            <span>Event Identity &amp; Capacity Limits</span>
+            <span>Event Identity &amp; General Settings</span>
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -93,28 +93,6 @@ export const CompetitionSettingsView: React.FC = () => {
                 value={settings.subTitle}
                 onChange={e => setSettings({ ...settings, subTitle: e.target.value })}
                 className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-sm text-white focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold uppercase text-slate-300 mb-1">Maximum Teams Limit</label>
-              <input
-                type="number"
-                required
-                value={settings.maxTeams}
-                onChange={e => setSettings({ ...settings, maxTeams: Number(e.target.value) })}
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-sm text-white font-mono focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold uppercase text-slate-300 mb-1">Team Size (Members)</label>
-              <input
-                type="number"
-                required
-                value={settings.teamSize}
-                onChange={e => setSettings({ ...settings, teamSize: Number(e.target.value) })}
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-sm text-white font-mono focus:outline-none"
               />
             </div>
           </div>

@@ -6,7 +6,6 @@ import { Team } from '../../types';
 export const TeamManagement: React.FC = () => {
   const [teams, setTeams] = useState<Team[]>([]);
   const [isRegistrationOpen, setIsRegistrationOpen] = useState(true);
-  const [maxTeams, setMaxTeams] = useState(20);
   const [searchQuery, setSearchQuery] = useState('');
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
   const [feedbackMsg, setFeedbackMsg] = useState('');
@@ -16,7 +15,6 @@ export const TeamManagement: React.FC = () => {
       const settingsRes = await api.getSettings();
       if (settingsRes.success && settingsRes.settings) {
         setIsRegistrationOpen(settingsRes.settings.isRegistrationOpen);
-        setMaxTeams(settingsRes.settings.maxTeams || 20);
       }
 
       const res = await api.getAllTeams();
@@ -100,7 +98,7 @@ export const TeamManagement: React.FC = () => {
               Module 3: Team Administration
             </span>
             <span className="text-xs text-slate-400">
-              {teams.length} / {maxTeams} Slots Registered
+              {teams.length} Registered Participants
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-white">Registered Teams &amp; Rosters</h1>

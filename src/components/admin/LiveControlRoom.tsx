@@ -24,6 +24,7 @@ export const LiveControlRoom: React.FC = () => {
   const [selectedRound, setSelectedRound] = useState<number>(gameState?.currentRound || 1);
   const [selectedQuestionNum, setSelectedQuestionNum] = useState<number>(gameState?.currentQuestionNumber || 1);
   const [currentQuestionData, setCurrentQuestionData] = useState<Question | null>(null);
+  const [roundQuestions, setRoundQuestions] = useState<Question[]>([]);
 
   const [approvedTeams, setApprovedTeams] = useState<Team[]>([]);
   const [liveSubmissions, setLiveSubmissions] = useState<any[]>([]);
@@ -69,6 +70,7 @@ export const LiveControlRoom: React.FC = () => {
     try {
       const res = await api.getQuestions(round);
       if (res.success && res.questions) {
+        setRoundQuestions(res.questions);
         const found = res.questions.find((q: Question) => q.questionNumber === qNum);
         setCurrentQuestionData(found || null);
       }
@@ -364,7 +366,10 @@ export const LiveControlRoom: React.FC = () => {
         <span className="text-xs font-bold uppercase tracking-wider text-slate-400 px-3">
           Select Question:
         </span>
-        {[1, 2, 3, 4, 5].map(qNum => {
+        {Array.from(new Set([
+          ...[1, 2, 3, 4, 5],
+          ...roundQuestions.map(q => q.questionNumber)
+        ])).sort((a, b) => a - b).map(qNum => {
           const isSelected = selectedQuestionNum === qNum;
           const isActiveQ =
             gameState?.currentRound === selectedRound && gameState?.currentQuestionNumber === qNum;
