@@ -11,7 +11,7 @@ interface Round1SequenceProps {
 }
 
 export const Round1Sequence: React.FC<Round1SequenceProps> = ({ question, isSubmitted, onSubmitted }) => {
-  const { remainingSeconds, gameState, submissionResponse } = useGame();
+  const { remainingSeconds, gameState, submissionResponse, setIsSubmitted } = useGame();
   const [activities, setActivities] = useState<Round1Activity[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -51,14 +51,15 @@ export const Round1Sequence: React.FC<Round1SequenceProps> = ({ question, isSubm
       const orderIds = activities.map(a => a.id);
       const res = await api.submitAnswer(question._id, orderIds);
       if (res.success) {
+        setIsSubmitted(true);
         onSubmitted();
       } else {
+        setIsSubmitting(false);
         setErrorMsg(res.message || 'Submission failed');
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Network error submitting sequence');
-    } finally {
       setIsSubmitting(false);
+      setErrorMsg(err.message || 'Network error submitting sequence');
     }
   };
 

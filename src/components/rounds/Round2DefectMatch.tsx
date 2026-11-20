@@ -11,7 +11,7 @@ interface Round2DefectMatchProps {
 }
 
 export const Round2DefectMatch: React.FC<Round2DefectMatchProps> = ({ question, isSubmitted, onSubmitted }) => {
-  const { remainingSeconds, gameState, submissionResponse } = useGame();
+  const { remainingSeconds, gameState, submissionResponse, setIsSubmitted } = useGame();
   const [selectedMatches, setSelectedMatches] = useState<Record<string, string>>({});
   const [isZoomOpen, setIsZoomOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -43,14 +43,15 @@ export const Round2DefectMatch: React.FC<Round2DefectMatchProps> = ({ question, 
     try {
       const res = await api.submitAnswer(question._id, selectedMatches);
       if (res.success) {
+        setIsSubmitted(true);
         onSubmitted();
       } else {
+        setIsSubmitting(false);
         setErrorMsg(res.message || 'Submission failed');
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Network error submitting answer');
-    } finally {
       setIsSubmitting(false);
+      setErrorMsg(err.message || 'Network error submitting answer');
     }
   };
 

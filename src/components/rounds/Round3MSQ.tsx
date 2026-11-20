@@ -12,7 +12,7 @@ interface Round3MSQProps {
 }
 
 export const Round3MSQ: React.FC<Round3MSQProps> = ({ question, isSubmitted, onSubmitted }) => {
-  const { remainingSeconds, gameState, submissionResponse } = useGame();
+  const { remainingSeconds, gameState, submissionResponse, setIsSubmitted } = useGame();
   const { team } = useAuth();
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,14 +40,15 @@ export const Round3MSQ: React.FC<Round3MSQProps> = ({ question, isSubmitted, onS
     try {
       const res = await api.submitAnswer(question._id, selectedOptions);
       if (res.success) {
+        setIsSubmitted(true);
         onSubmitted();
       } else {
+        setIsSubmitting(false);
         setErrorMsg(res.message || 'Submission failed');
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Network error submitting answer');
-    } finally {
       setIsSubmitting(false);
+      setErrorMsg(err.message || 'Network error submitting answer');
     }
   };
 
