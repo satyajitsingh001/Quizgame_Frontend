@@ -10,7 +10,8 @@ import {
   AlertTriangle,
   RefreshCw,
   Radio,
-  Sparkles
+  Sparkles,
+  Clock
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { api } from '../../services/api';
@@ -25,6 +26,7 @@ export const LiveControlRoom: React.FC = () => {
   const [settings, setSettings] = useState<CompetitionSettings | null>(null);
   const [leaderboardList, setLeaderboardList] = useState<LeaderboardEntry[]>([]);
   const [rightColTab, setRightColTab] = useState<'responses' | 'roundScores'>('responses');
+  const [submissionFilter, setSubmissionFilter] = useState<'all' | 'submitted' | 'not_submitted'>('all');
   const [selectedRound, setSelectedRound] = useState<number>(gameState?.currentRound || 1);
   const [selectedQuestionNum, setSelectedQuestionNum] = useState<number>(gameState?.currentQuestionNumber || 1);
   const [currentQuestionData, setCurrentQuestionData] = useState<Question | null>(null);
@@ -299,9 +301,19 @@ export const LiveControlRoom: React.FC = () => {
     ? (settings?.round2Timer ?? currentQuestionData?.timerSeconds ?? 15)
     : (settings?.round3Timer ?? currentQuestionData?.timerSeconds ?? 30);
 
+  const submittedTeamIds = new Set(
+    liveSubmissions.map(s => (s.teamId?.teamId || s.teamId?._id || s.teamId || '').toString())
+  );
+
+  const submittedCount = approvedTeams.filter(t =>
+    submittedTeamIds.has(t.teamId) || submittedTeamIds.has(t._id.toString())
+  ).length;
+
+  const notSubmittedCount = Math.max(0, approvedTeams.length - submittedCount);
+
   const submissionPercentage =
     approvedTeams.length > 0
-      ? Math.round((liveSubmissions.length / approvedTeams.length) * 100)
+      ? Math.round((submittedCount / approvedTeams.length) * 100)
       : 0;
 
   return (
@@ -782,13 +794,37 @@ export const LiveControlRoom: React.FC = () => {
             />
           </div>
 
-          {/* Submission Gauge */}
+          {/* Submission Gauge & Detailed Breakdown */}
           <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-300">Team Submissions</span>
-              <span className="text-xs font-mono font-extrabold text-amber-400">
-                {liveSubmissions.length} / {approvedTeams.length} ({submissionPercentage}%)
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                Live Submissions Status
               </span>
+              <span className="text-xs font-mono font-bold text-slate-400">
+                Registered: <strong className="text-white">{approvedTeams.length}</strong>
+              </span>
+            </div>
+
+            {/* Submitted vs Not Submitted KPI Grid */}
+            <div className="grid grid-cols-2 gap-2 text-center">
+              <div className="p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-500/40 flex items-center justify-between px-3">
+                <span className="text-xs font-bold uppercase text-emerald-400 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Submitted</span>
+                </span>
+                <span className="text-lg font-black text-emerald-300 font-mono">
+                  {submittedCount}
+                </span>
+              </div>
+              <div className="p-2.5 rounded-xl bg-amber-950/40 border border-amber-500/40 flex items-center justify-between px-3">
+                <span className="text-xs font-bold uppercase text-amber-400 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>Not Submitted</span>
+                </span>
+                <span className="text-lg font-black text-amber-300 font-mono">
+                  {notSubmittedCount}
+                </span>
+              </div>
             </div>
 
             <div className="w-full h-2 bg-slate-850 rounded-full overflow-hidden">
@@ -812,7 +848,7 @@ export const LiveControlRoom: React.FC = () => {
                       : 'text-slate-400 hover:text-white'
                   }`}
                 >
-                  Q{selectedQuestionNum} Responses
+                  Q{selectedQuestionNum} Live
                 </button>
                 <button
                   type="button"
@@ -838,72 +874,124 @@ export const LiveControlRoom: React.FC = () => {
             </div>
 
             {rightColTab === 'responses' ? (
-              <div className="max-h-64 overflow-y-auto space-y-1.5 pr-1">
-                {approvedTeams.length === 0 ? (
-                  <p className="text-xs text-slate-500 text-center py-4">No registered teams yet.</p>
-                ) : (
-                  approvedTeams.map(t => {
-                    const sub = liveSubmissions.find(
-                      s => s.teamId?.teamId === t.teamId || s.teamId === t.teamId || s.teamId?._id === t._id
-                    );
-                    const isEvaluated = isSelectedCompleted || isCurrentRevealed || sub?.isEvaluated;
-                    const questionScore = sub?.scoreResult?.totalScore;
-                    const teamTotalScore = teamScoresMap[t._id] ?? teamScoresMap[t.teamId] ?? 0;
+              <div className="space-y-2">
+                {/* Filter Pills: All / Submitted / Not Submitted */}
+                <div className="flex items-center gap-1.5 pt-0.5 pb-1">
+                  <button
+                    type="button"
+                    onClick={() => setSubmissionFilter('all')}
+                    className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all ${
+                      submissionFilter === 'all'
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-slate-900 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    All ({approvedTeams.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSubmissionFilter('submitted')}
+                    className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all ${
+                      submissionFilter === 'submitted'
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-slate-900 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Submitted ({submittedCount})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSubmissionFilter('not_submitted')}
+                    className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all ${
+                      submissionFilter === 'not_submitted'
+                        ? 'bg-amber-600 text-white'
+                        : 'bg-slate-900 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Not Submitted ({notSubmittedCount})
+                  </button>
+                </div>
 
-                    return (
-                      <div
-                        key={t._id}
-                        className={`py-2 px-3 rounded-xl border flex items-center justify-between text-xs transition-colors ${
-                          isEvaluated && questionScore !== undefined && questionScore > 0
-                            ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-200'
-                            : isEvaluated && questionScore !== undefined && questionScore < 0
-                            ? 'bg-red-950/30 border-red-500/40 text-red-200'
-                            : sub
-                            ? 'bg-emerald-950/20 border-emerald-500/30 text-emerald-300'
-                            : 'bg-slate-900/40 border-slate-800 text-slate-400'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="font-mono font-bold text-slate-400 shrink-0">{t.teamId}</span>
-                          <span className="font-semibold text-white truncate max-w-[130px]">{t.teamName}</span>
-                        </div>
+                <div className="max-h-64 overflow-y-auto space-y-1.5 pr-1">
+                  {approvedTeams.length === 0 ? (
+                    <p className="text-xs text-slate-500 text-center py-4">No registered teams yet.</p>
+                  ) : (
+                    approvedTeams
+                      .filter(t => {
+                        const isSub = Boolean(
+                          liveSubmissions.find(
+                            s => s.teamId?.teamId === t.teamId || s.teamId === t.teamId || s.teamId?._id === t._id
+                          )
+                        );
+                        if (submissionFilter === 'submitted') return isSub;
+                        if (submissionFilter === 'not_submitted') return !isSub;
+                        return true;
+                      })
+                      .map(t => {
+                        const sub = liveSubmissions.find(
+                          s => s.teamId?.teamId === t.teamId || s.teamId === t.teamId || s.teamId?._id === t._id
+                        );
+                        const isEvaluated = isSelectedCompleted || isCurrentRevealed || sub?.isEvaluated;
+                        const questionScore = sub?.scoreResult?.totalScore;
+                        const teamTotalScore = teamScoresMap[t._id] ?? teamScoresMap[t.teamId] ?? 0;
 
-                        <div className="flex items-center gap-2 shrink-0">
-                          {isEvaluated ? (
-                            <>
-                              {questionScore !== undefined ? (
-                                <span
-                                  className={`font-mono font-black text-xs px-2 py-0.5 rounded-lg border ${
-                                    questionScore > 0
-                                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                                      : questionScore < 0
-                                      ? 'bg-red-500/20 text-red-300 border-red-500/40'
-                                      : 'bg-slate-800 text-slate-400 border-slate-700'
-                                  }`}
-                                >
-                                  {questionScore > 0 ? `+${questionScore}` : questionScore} PTS
+                        return (
+                          <div
+                            key={t._id}
+                            className={`py-2 px-3 rounded-xl border flex items-center justify-between text-xs transition-colors ${
+                              isEvaluated && questionScore !== undefined && questionScore > 0
+                                ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-200'
+                                : isEvaluated && questionScore !== undefined && questionScore < 0
+                                ? 'bg-red-950/30 border-red-500/40 text-red-200'
+                                : sub
+                                ? 'bg-emerald-950/20 border-emerald-500/30 text-emerald-300'
+                                : 'bg-slate-900/40 border-slate-800 text-slate-400'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="font-mono font-bold text-slate-400 shrink-0">{t.teamId}</span>
+                              <span className="font-semibold text-white truncate max-w-[120px]">{t.teamName}</span>
+                            </div>
+
+                            <div className="flex items-center gap-2 shrink-0">
+                              {isEvaluated ? (
+                                <>
+                                  {questionScore !== undefined ? (
+                                    <span
+                                      className={`font-mono font-black text-xs px-2 py-0.5 rounded-lg border ${
+                                        questionScore > 0
+                                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                                          : questionScore < 0
+                                          ? 'bg-red-500/20 text-red-300 border-red-500/40'
+                                          : 'bg-slate-800 text-slate-400 border-slate-700'
+                                      }`}
+                                    >
+                                      {questionScore > 0 ? `+${questionScore}` : questionScore} PTS
+                                    </span>
+                                  ) : (
+                                    <span className="text-[11px] font-mono text-slate-500">0 PTS</span>
+                                  )}
+                                </>
+                              ) : sub ? (
+                                <span className="font-mono font-bold text-emerald-400 flex items-center gap-1 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 text-[11px]">
+                                  <CheckCircle2 className="w-3.5 h-3.5" />
+                                  <span>Submitted ({sub.submissionTimeSeconds ?? '—'}s)</span>
                                 </span>
                               ) : (
-                                <span className="text-[11px] font-mono text-slate-500">0 PTS</span>
+                                <span className="text-[10px] font-mono font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded flex items-center gap-1">
+                                  <span>⏳ Not Submitted</span>
+                                </span>
                               )}
-                            </>
-                          ) : sub ? (
-                            <span className="font-mono font-bold text-emerald-400 flex items-center gap-1">
-                              <CheckCircle2 className="w-3.5 h-3.5" />
-                              <span>{sub.submissionTimeSeconds ?? '—'}s</span>
-                            </span>
-                          ) : (
-                            <span className="text-[11px] text-slate-500 italic">Thinking...</span>
-                          )}
 
-                          <span className="font-mono text-[11px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-lg">
-                            Total: {teamTotalScore}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
+                              <span className="font-mono text-[11px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-lg">
+                                Total: {teamTotalScore}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })
+                  )}
+                </div>
               </div>
             ) : (
               /* Round Scores Tab for Quizmaster */
