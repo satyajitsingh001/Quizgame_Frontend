@@ -96,28 +96,6 @@ export const CompetitionSettingsView: React.FC = () => {
               />
             </div>
           </div>
-
-          <div className="flex items-center gap-6 pt-2">
-            <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-200">
-              <input
-                type="checkbox"
-                checked={settings.isRegistrationOpen}
-                onChange={e => setSettings({ ...settings, isRegistrationOpen: e.target.checked })}
-                className="w-4 h-4 accent-indigo-600 rounded"
-              />
-              <span>Team Registration is OPEN</span>
-            </label>
-
-            <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-200">
-              <input
-                type="checkbox"
-                checked={settings.isLeaderboardVisibleToTeams}
-                onChange={e => setSettings({ ...settings, isLeaderboardVisibleToTeams: e.target.checked })}
-                className="w-4 h-4 accent-indigo-600 rounded"
-              />
-              <span>Display Leaderboard to Participants</span>
-            </label>
-          </div>
         </div>
 
         {/* Round Timers & Points Config */}
