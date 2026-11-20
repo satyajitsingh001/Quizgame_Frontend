@@ -49,13 +49,28 @@ export const TeamLobby: React.FC = () => {
     (currentQuestion?._id && submittedQuestionIds.has(currentQuestion._id))
   );
 
-  const isQuestionActive =
-    gameState?.questionStatus === 'ACTIVE' || gameState?.questionStatus === 'PAUSED';
+  const isQuestionActive = Boolean(
+    (gameState?.questionStatus === 'ACTIVE' || gameState?.questionStatus === 'PAUSED') &&
+    remainingSeconds > 0
+  );
+
+  const isTimeUp = Boolean(
+    gameState?.questionStatus === 'ENDED' ||
+    gameState?.questionStatus === 'REVEALED' ||
+    ((gameState?.questionStatus === 'ACTIVE' || gameState?.questionStatus === 'PAUSED') &&
+      remainingSeconds <= 0)
+  );
 
   // Real-time automatic polling:
-  // Polls every 2 seconds when waiting for question or after submitting so next question appears automatically
+  // Polls every 2 seconds when waiting for question, after submitting, or when timer ended
   useEffect(() => {
-    const shouldPoll = !isQuestionActive || isCurrentQSubmitted || gameState?.questionStatus === 'ENDED' || gameState?.questionStatus === 'REVEALED';
+    const shouldPoll =
+      !isQuestionActive ||
+      isCurrentQSubmitted ||
+      isTimeUp ||
+      gameState?.questionStatus === 'ENDED' ||
+      gameState?.questionStatus === 'REVEALED';
+
     if (shouldPoll) {
       const interval = setInterval(async () => {
         await fetchGameState();
@@ -64,7 +79,14 @@ export const TeamLobby: React.FC = () => {
       }, 2000);
       return () => clearInterval(interval);
     }
-  }, [isQuestionActive, isCurrentQSubmitted, gameState?.questionStatus]);
+  }, [isQuestionActive, isCurrentQSubmitted, isTimeUp, gameState?.questionStatus]);
+
+  // Immediate sync when timer expires to ensure server state is captured
+  useEffect(() => {
+    if (isTimeUp && gameState?.questionStatus === 'ACTIVE') {
+      fetchGameState();
+    }
+  }, [isTimeUp]);
 
   if (!team) {
     return (
@@ -108,7 +130,7 @@ export const TeamLobby: React.FC = () => {
 
         {/* Live Timer or State pill & Refresh */}
         <div className="flex items-center gap-3 flex-wrap">
-          {/* Live Timer (shown only when question is active and user has not yet submitted) */}
+          {/* Live Timer (shown only when question is active with time remaining and user has not yet submitted) */}
           {isQuestionActive && !isCurrentQSubmitted ? (
             <Timer
               remainingSeconds={remainingSeconds}
@@ -123,6 +145,8 @@ export const TeamLobby: React.FC = () => {
                 <span className="text-xs font-extrabold text-slate-200">
                   {isCurrentQSubmitted
                     ? 'Submitted • Standing By'
+                    : isTimeUp
+                    ? "Time's Up • Standing By"
                     : gameState?.status === 'RUNNING' && gameState?.currentRound
                     ? `Round ${gameState.currentRound} In Progress`
                     : gameState?.status === 'COMPLETED'
@@ -204,8 +228,29 @@ export const TeamLobby: React.FC = () => {
               <span>Auto-sync active • Next question will appear automatically</span>
             </div>
           </div>
+        ) : isTimeUp ? (
+          /* State 3: Timer expired before submission -> Time's up waiting screen */
+          <div className="glass-panel p-8 sm:p-12 rounded-3xl border border-slate-800 text-center space-y-6 animate-slide-in-up">
+            <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto shadow-lg shadow-amber-500/10">
+              <Clock className="w-8 h-8 text-amber-400" />
+            </div>
+
+            <div className="space-y-2">
+              <h2 className="text-2xl sm:text-3xl font-black text-white">
+                Time's Up!
+              </h2>
+              <p className="text-sm text-slate-300 max-w-md mx-auto leading-relaxed">
+                The timer for this question has expired. Please wait while the Quizmaster proceeds to the next question.
+              </p>
+            </div>
+
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-400">
+              <Radio className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+              <span>Auto-sync active • Next question will appear automatically</span>
+            </div>
+          </div>
         ) : (
-          /* State 3: Waiting Lounge between questions or rounds */
+          /* State 4: Waiting Lounge between questions or rounds */
           <div className="glass-panel p-8 sm:p-12 rounded-3xl border border-slate-800 text-center space-y-6">
             <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mx-auto">
               <Clock className="w-8 h-8" />
