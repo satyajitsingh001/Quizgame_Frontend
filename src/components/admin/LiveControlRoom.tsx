@@ -15,12 +15,13 @@ import {
 import { Link } from 'react-router-dom';
 import { api } from '../../services/api';
 import { useGame } from '../../context/GameContext';
-import { Question, Team } from '../../types';
+import { Question, Team, CompetitionSettings } from '../../types';
 import { Timer } from '../common/Timer';
 import { AnswerRevealModal } from '../common/AnswerRevealModal';
 
 export const LiveControlRoom: React.FC = () => {
   const { gameState, fetchGameState, remainingSeconds } = useGame();
+  const [settings, setSettings] = useState<CompetitionSettings | null>(null);
   const [selectedRound, setSelectedRound] = useState<number>(gameState?.currentRound || 1);
   const [selectedQuestionNum, setSelectedQuestionNum] = useState<number>(gameState?.currentQuestionNumber || 1);
   const [currentQuestionData, setCurrentQuestionData] = useState<Question | null>(null);
@@ -99,9 +100,22 @@ export const LiveControlRoom: React.FC = () => {
     }
   };
 
+  // Load competition settings to synchronize round timers & point rules
+  const loadSettings = async () => {
+    try {
+      const res = await api.getSettings();
+      if (res.success && res.settings) {
+        setSettings(res.settings);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
   const handleManualRefresh = async () => {
     setIsRefreshing(true);
     await fetchGameState();
+    await loadSettings();
     await loadTeams();
     await loadLeaderboardScores();
     if (currentQuestionData?._id) {
@@ -111,6 +125,7 @@ export const LiveControlRoom: React.FC = () => {
   };
 
   useEffect(() => {
+    loadSettings();
     loadTeams();
   }, []);
 
@@ -274,6 +289,12 @@ export const LiveControlRoom: React.FC = () => {
       s => s.isEvaluated && Number(s.round) === Number(selectedRound) && Number(s.questionNumber) === Number(selectedQuestionNum)
     );
 
+  const effectiveTimer = selectedRound === 1
+    ? (settings?.round1Timer ?? currentQuestionData?.timerSeconds ?? 30)
+    : selectedRound === 2
+    ? (settings?.round2Timer ?? currentQuestionData?.timerSeconds ?? 15)
+    : (settings?.round3Timer ?? currentQuestionData?.timerSeconds ?? 30);
+
   const submissionPercentage =
     approvedTeams.length > 0
       ? Math.round((liveSubmissions.length / approvedTeams.length) * 100)
@@ -328,9 +349,27 @@ export const LiveControlRoom: React.FC = () => {
       {/* Round Selection Tabs */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {[
-          { round: 1, title: 'Round 1: Fastest Finger First', desc: 'Sequence Ordering' },
-          { round: 2, title: 'Round 2: Guess the Defect', desc: 'Defect Image Matching' },
-          { round: 3, title: 'Round 3: Quality MSQ', desc: 'Captain Multiple Select' }
+          {
+            round: 1,
+            title: 'Round 1: Fastest Finger First',
+            desc: 'Sequence Ordering',
+            timer: settings?.round1Timer ?? 30,
+            points: settings?.round1Points ?? 10
+          },
+          {
+            round: 2,
+            title: 'Round 2: Guess the Defect',
+            desc: 'Defect Image Matching',
+            timer: settings?.round2Timer ?? 15,
+            points: settings?.round2AllCorrectPoints ?? 10
+          },
+          {
+            round: 3,
+            title: 'Round 3: Quality MSQ',
+            desc: 'Multiple Select Challenge',
+            timer: settings?.round3Timer ?? 30,
+            points: settings?.round3CorrectPoints ?? 20
+          }
         ].map(r => {
           const isSelected = selectedRound === r.round;
           const isLiveRound = gameState?.currentRound === r.round;
@@ -348,11 +387,16 @@ export const LiveControlRoom: React.FC = () => {
             >
               <div className="flex items-center justify-between mb-1">
                 <span className="text-xs font-bold uppercase text-slate-400">Round {r.round}</span>
-                {isLiveRound && (
-                  <span className="flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                    <Radio className="w-3 h-3 text-emerald-400" /> ACTIVE
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-slate-850 text-indigo-300 border border-indigo-500/30">
+                    ⏱️ {r.timer}s · 🎯 {r.points} pts
                   </span>
-                )}
+                  {isLiveRound && (
+                    <span className="flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                      <Radio className="w-3 h-3 text-emerald-400" /> ACTIVE
+                    </span>
+                  )}
+                </div>
               </div>
               <p className="text-sm font-extrabold text-white">{r.title}</p>
               <p className="text-xs text-slate-400 mt-0.5">{r.desc}</p>
@@ -713,7 +757,7 @@ export const LiveControlRoom: React.FC = () => {
                       className="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm shadow-lg shadow-emerald-600/30 flex items-center gap-2 transition-transform active:scale-95"
                     >
                       <Play className="w-4 h-4 fill-white" />
-                      <span>Start Q{selectedQuestionNum} ({currentQuestionData.timerSeconds}s Timer)</span>
+                      <span>Start Q{selectedQuestionNum} ({effectiveTimer}s Timer)</span>
                     </button>
                   )}
                 </div>
@@ -726,13 +770,13 @@ export const LiveControlRoom: React.FC = () => {
         <div className="glass-panel p-6 rounded-3xl border border-slate-800 space-y-6">
           <div className="text-center">
             <span className="text-xs uppercase font-extrabold tracking-wider text-slate-400 block mb-2">
-              Server-Derived Timer
+              Server-Derived Timer ({effectiveTimer}s)
             </span>
             <Timer
               remainingSeconds={
                 gameState?.currentQuestionNumber === selectedQuestionNum ? remainingSeconds : 0
               }
-              totalDuration={currentQuestionData?.timerSeconds || 30}
+              totalDuration={gameState?.timerDuration || effectiveTimer}
               isPaused={isCurrentPaused}
             />
           </div>

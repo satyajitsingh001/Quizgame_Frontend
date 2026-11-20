@@ -1,8 +1,19 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Trophy, Users, ShieldCheck, Zap, Eye, Award, CheckCircle2, ArrowRight } from 'lucide-react';
+import { api } from '../services/api';
+import { CompetitionSettings } from '../types';
 
 export const Home: React.FC = () => {
+  const [settings, setSettings] = useState<CompetitionSettings | null>(null);
+
+  useEffect(() => {
+    api.getSettings().then(res => {
+      if (res.success && res.settings) {
+        setSettings(res.settings);
+      }
+    }).catch(() => {});
+  }, []);
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 sm:py-16 space-y-16">
       {/* Hero Section */}
@@ -72,12 +83,12 @@ export const Home: React.FC = () => {
               <span className="text-xs font-bold uppercase text-amber-400 tracking-wider">Round 1</span>
               <h3 className="text-lg font-bold text-white mt-0.5">Fastest Finger First</h3>
               <p className="text-xs text-slate-400 mt-2 leading-relaxed">
-                Arrange jumbled quality activities (A, B, C, D) into the correct sequence in 30 seconds. Fastest completely correct team within 15s earns an additional +5 point speed bonus!
+                Arrange jumbled quality activities (A, B, C, D) into the correct sequence in {settings?.round1Timer ?? 30} seconds. Fastest completely correct team within {settings?.round1BonusThresholdSeconds ?? 15}s earns an additional +{settings?.round1Bonus ?? 5} point speed bonus!
               </p>
             </div>
             <div className="pt-2 border-t border-slate-800 text-xs text-slate-300 font-semibold space-y-1">
-              <div>🎯 10 Points for Correct Sequence</div>
-              <div>⚡ +5 Speed Bonus (within 15s)</div>
+              <div>🎯 {settings?.round1Points ?? 10} Points for Correct Sequence</div>
+              <div>⚡ +{settings?.round1Bonus ?? 5} Speed Bonus (within {settings?.round1BonusThresholdSeconds ?? 15}s)</div>
             </div>
           </div>
 
@@ -90,13 +101,13 @@ export const Home: React.FC = () => {
               <span className="text-xs font-bold uppercase text-cyan-400 tracking-wider">Round 2</span>
               <h3 className="text-lg font-bold text-white mt-0.5">Guess the Defect</h3>
               <p className="text-xs text-slate-400 mt-2 leading-relaxed">
-                Inspect high-resolution photographs of defects (SMT assembly, foundry casting, automotive paint, and precision machining) and match terminology within 15 seconds.
+                Inspect high-resolution photographs of defects (SMT assembly, foundry casting, automotive paint, and precision machining) and match terminology within {settings?.round2Timer ?? 15} seconds.
               </p>
             </div>
             <div className="pt-2 border-t border-slate-800 text-xs text-slate-300 font-semibold space-y-1">
-              <div>🎯 +10 Points for All 4 Correct</div>
-              <div>⚡ +5 Points for 3 Correct Matches</div>
-              <div>⚠️ -5 Points for &lt;3 Correct</div>
+              <div>🎯 +{settings?.round2AllCorrectPoints ?? 10} Points for All Correct</div>
+              <div>⚡ +{settings?.round2PartialPoints ?? 5} Points for 3 Correct Matches</div>
+              <div>⚠️ {settings?.round2PenaltyPoints ?? -5} Points Penalty for &lt;3 Correct</div>
             </div>
           </div>
 
@@ -109,13 +120,13 @@ export const Home: React.FC = () => {
               <span className="text-xs font-bold uppercase text-purple-400 tracking-wider">Round 3</span>
               <h3 className="text-lg font-bold text-white mt-0.5">Quality MSQ (Multiple Select)</h3>
               <p className="text-xs text-slate-400 mt-2 leading-relaxed">
-                Participants answer rigorous Multiple-Select Questions. Exact correct option combination is required to earn +20 points.
+                Participants answer rigorous Multiple-Select Questions in {settings?.round3Timer ?? 30} seconds. Exact correct option combination is required to earn +{settings?.round3CorrectPoints ?? 20} points.
               </p>
             </div>
             <div className="pt-2 border-t border-slate-800 text-xs text-slate-300 font-semibold space-y-1">
-              <div>🎯 +20 Points for Exact Match</div>
-              <div>⚠️ -10 Points for Wrong Attempt</div>
-              <div>⏱️ -15 Points for Timeout / Blank</div>
+              <div>🎯 +{settings?.round3CorrectPoints ?? 20} Points for Exact Match</div>
+              <div>⚠️ {settings?.round3WrongPenalty ?? -10} Points for Wrong Attempt</div>
+              <div>⏱️ {settings?.round3UnansweredPenalty ?? -15} Points for Timeout / Blank</div>
             </div>
           </div>
         </div>

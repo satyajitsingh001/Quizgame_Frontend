@@ -10,11 +10,12 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { api, getFullImageUrl } from '../../services/api';
-import { Question } from '../../types';
+import { Question, CompetitionSettings } from '../../types';
 
 export const QuestionBank: React.FC = () => {
   const [activeRound, setActiveRound] = useState<number>(1);
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [settings, setSettings] = useState<CompetitionSettings | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [feedback, setFeedback] = useState('');
@@ -64,9 +65,30 @@ export const QuestionBank: React.FC = () => {
     }
   };
 
+  const loadSettings = async () => {
+    try {
+      const res = await api.getSettings();
+      if (res.success && res.settings) {
+        setSettings(res.settings);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
   useEffect(() => {
     loadQuestions(activeRound);
   }, [activeRound]);
+
+  const getRoundDefaultTimer = (r: number) => {
+    if (r === 1) return settings?.round1Timer ?? 30;
+    if (r === 2) return settings?.round2Timer ?? 15;
+    return settings?.round3Timer ?? 30;
+  };
 
   const openCreateModal = () => {
     setEditingId(null);
@@ -77,7 +99,7 @@ export const QuestionBank: React.FC = () => {
     setFormQuestionNum(nextNum);
     setFormPrompt('');
     setFormDescription('');
-    setFormTimer(activeRound === 2 ? 15 : 30);
+    setFormTimer(getRoundDefaultTimer(activeRound));
 
     // Reset R1
     setR1ActivityA('');
@@ -114,7 +136,7 @@ export const QuestionBank: React.FC = () => {
     setFormQuestionNum(q.questionNumber);
     setFormPrompt(q.prompt);
     setFormDescription(q.description || '');
-    setFormTimer(q.timerSeconds || (q.round === 2 ? 15 : 30));
+    setFormTimer(q.timerSeconds || getRoundDefaultTimer(q.round));
 
     // R1
     if (q.round === 1) {
@@ -513,7 +535,7 @@ export const QuestionBank: React.FC = () => {
                     onChange={e => {
                       const r = Number(e.target.value);
                       setFormRound(r);
-                      setFormTimer(r === 2 ? 15 : 30);
+                      setFormTimer(getRoundDefaultTimer(r));
                     }}
                     className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:outline-none"
                   >
