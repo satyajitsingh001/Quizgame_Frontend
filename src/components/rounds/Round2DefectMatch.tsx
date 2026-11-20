@@ -40,18 +40,12 @@ export const Round2DefectMatch: React.FC<Round2DefectMatchProps> = ({ question, 
     }
 
     setIsSubmitting(true);
+    // Instantly remove question view and switch to waiting screen on click
+    onSubmitted();
     try {
-      const res = await api.submitAnswer(question._id, selectedMatches);
-      if (res.success) {
-        setIsSubmitted(true);
-        onSubmitted();
-      } else {
-        setIsSubmitting(false);
-        setErrorMsg(res.message || 'Submission failed');
-      }
+      await api.submitAnswer(question._id, selectedMatches);
     } catch (err: any) {
-      setIsSubmitting(false);
-      setErrorMsg(err.message || 'Network error submitting answer');
+      console.error('Submission error:', err);
     }
   };
 

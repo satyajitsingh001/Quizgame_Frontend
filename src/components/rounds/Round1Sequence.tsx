@@ -47,19 +47,13 @@ export const Round1Sequence: React.FC<Round1SequenceProps> = ({ question, isSubm
     if (isSubmitted || isSubmitting) return;
     setErrorMsg('');
     setIsSubmitting(true);
+    // Instantly remove question view and switch to waiting screen on click
+    onSubmitted();
     try {
       const orderIds = activities.map(a => a.id);
-      const res = await api.submitAnswer(question._id, orderIds);
-      if (res.success) {
-        setIsSubmitted(true);
-        onSubmitted();
-      } else {
-        setIsSubmitting(false);
-        setErrorMsg(res.message || 'Submission failed');
-      }
+      await api.submitAnswer(question._id, orderIds);
     } catch (err: any) {
-      setIsSubmitting(false);
-      setErrorMsg(err.message || 'Network error submitting sequence');
+      console.error('Submission error:', err);
     }
   };
 

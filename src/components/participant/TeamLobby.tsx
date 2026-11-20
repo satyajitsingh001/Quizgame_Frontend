@@ -15,6 +15,7 @@ export const TeamLobby: React.FC = () => {
     currentQuestion,
     remainingSeconds,
     isSubmitted,
+    setIsSubmitted,
     fetchGameState,
     checkMySubmissionStatus,
     isFetchingState
@@ -22,13 +23,39 @@ export const TeamLobby: React.FC = () => {
 
   const [lastRefreshedAt, setLastRefreshedAt] = useState<string>(new Date().toLocaleTimeString());
 
+  // Track questions submitted locally by ID so they disappear instantly on click
+  const [submittedQuestionIds, setSubmittedQuestionIds] = useState<Set<string>>(() => {
+    try {
+      const stored = sessionStorage.getItem('pp_submitted_qids');
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+
+  const markQuestionSubmitted = (qId: string) => {
+    setSubmittedQuestionIds(prev => {
+      const next = new Set(prev).add(qId);
+      try {
+        sessionStorage.setItem('pp_submitted_qids', JSON.stringify(Array.from(next)));
+      } catch {}
+      return next;
+    });
+    setIsSubmitted(true);
+  };
+
+  const isCurrentQSubmitted = Boolean(
+    isSubmitted ||
+    (currentQuestion?._id && submittedQuestionIds.has(currentQuestion._id))
+  );
+
   const isQuestionActive =
     gameState?.questionStatus === 'ACTIVE' || gameState?.questionStatus === 'PAUSED';
 
   // Real-time automatic polling:
   // Polls every 2 seconds when waiting for question or after submitting so next question appears automatically
   useEffect(() => {
-    const shouldPoll = !isQuestionActive || isSubmitted || gameState?.questionStatus === 'ENDED' || gameState?.questionStatus === 'REVEALED';
+    const shouldPoll = !isQuestionActive || isCurrentQSubmitted || gameState?.questionStatus === 'ENDED' || gameState?.questionStatus === 'REVEALED';
     if (shouldPoll) {
       const interval = setInterval(async () => {
         await fetchGameState();
@@ -37,7 +64,7 @@ export const TeamLobby: React.FC = () => {
       }, 2000);
       return () => clearInterval(interval);
     }
-  }, [isQuestionActive, isSubmitted, gameState?.questionStatus]);
+  }, [isQuestionActive, isCurrentQSubmitted, gameState?.questionStatus]);
 
   if (!team) {
     return (
@@ -82,7 +109,7 @@ export const TeamLobby: React.FC = () => {
         {/* Live Timer or State pill & Refresh */}
         <div className="flex items-center gap-3 flex-wrap">
           {/* Live Timer (shown only when question is active and user has not yet submitted) */}
-          {isQuestionActive && !isSubmitted ? (
+          {isQuestionActive && !isCurrentQSubmitted ? (
             <Timer
               remainingSeconds={remainingSeconds}
               totalDuration={gameState?.timerDuration || 30}
@@ -94,7 +121,7 @@ export const TeamLobby: React.FC = () => {
               <div className="text-left">
                 <span className="text-[10px] uppercase font-bold text-slate-400 block">Status</span>
                 <span className="text-xs font-extrabold text-slate-200">
-                  {isSubmitted
+                  {isCurrentQSubmitted
                     ? 'Submitted • Standing By'
                     : gameState?.status === 'RUNNING' && gameState?.currentRound
                     ? `Round ${gameState.currentRound} In Progress`
@@ -132,31 +159,31 @@ export const TeamLobby: React.FC = () => {
       {/* Main Gameplay Container */}
       <div className="space-y-6">
         {/* State 1: Active question that user has NOT submitted yet -> Display Question */}
-        {isQuestionActive && currentQuestion && !isSubmitted ? (
+        {isQuestionActive && currentQuestion && !isCurrentQSubmitted ? (
           <>
             {currentQuestion.round === 1 && (
               <Round1Sequence
                 question={currentQuestion}
-                isSubmitted={isSubmitted}
-                onSubmitted={checkMySubmissionStatus}
+                isSubmitted={isCurrentQSubmitted}
+                onSubmitted={() => markQuestionSubmitted(currentQuestion._id)}
               />
             )}
             {currentQuestion.round === 2 && (
               <Round2DefectMatch
                 question={currentQuestion}
-                isSubmitted={isSubmitted}
-                onSubmitted={checkMySubmissionStatus}
+                isSubmitted={isCurrentQSubmitted}
+                onSubmitted={() => markQuestionSubmitted(currentQuestion._id)}
               />
             )}
             {currentQuestion.round === 3 && (
               <Round3MSQ
                 question={currentQuestion}
-                isSubmitted={isSubmitted}
-                onSubmitted={checkMySubmissionStatus}
+                isSubmitted={isCurrentQSubmitted}
+                onSubmitted={() => markQuestionSubmitted(currentQuestion._id)}
               />
             )}
           </>
-        ) : isSubmitted ? (
+        ) : isCurrentQSubmitted ? (
           /* State 2: Question Submitted -> Simple clean waiting screen */
           <div className="glass-panel p-8 sm:p-12 rounded-3xl border border-slate-800 text-center space-y-6 animate-slide-in-up">
             <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/10">
