@@ -17,6 +17,7 @@ export interface Round2Defect {
   id: string; // '1', '2', '3', '4'
   label: string; // 'Zone #1'
   correctTerm?: string;
+  imageUrl?: string;
 }
 
 export interface Round3Option {

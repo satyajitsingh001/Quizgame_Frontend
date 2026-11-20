@@ -41,6 +41,7 @@ export const LiveControlRoom: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isRevealModalOpen, setIsRevealModalOpen] = useState(false);
   const [isR2ImageZoomed, setIsR2ImageZoomed] = useState(false);
+  const [zoomImageSrc, setZoomImageSrc] = useState<string | null>(null);
 
   // Load team cumulative scores across the competition
   const loadLeaderboardScores = async () => {
@@ -511,8 +512,58 @@ export const LiveControlRoom: React.FC = () => {
                 </div>
               </div>
 
-              {/* Round 2 Defect Image Inspection Display */}
-              {currentQuestionData.round === 2 && currentQuestionData.round2ImageUrl && (
+              {/* Round 2 Defect Image Inspection Display (Supports both 4-image grid and single image) */}
+              {currentQuestionData.round === 2 && currentQuestionData.round2Defects && currentQuestionData.round2Defects.some(d => d.imageUrl) ? (
+                <div className="rounded-2xl overflow-hidden border border-slate-700 bg-slate-950 p-4 space-y-3 shadow-xl">
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-300">
+                    <span className="flex items-center gap-1.5 text-cyan-400 uppercase tracking-wider">
+                      <Eye className="w-4 h-4" />
+                      Round 2 Target Zones &amp; Correct Images (4 Items):
+                    </span>
+                    <span className="text-[11px] text-slate-400">
+                      Click any image to enlarge
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {currentQuestionData.round2Defects.map(d => (
+                      <div
+                        key={d.id}
+                        onClick={() => {
+                          if (d.imageUrl) {
+                            setZoomImageSrc(d.imageUrl);
+                            setIsR2ImageZoomed(true);
+                          }
+                        }}
+                        className="p-3 rounded-xl bg-slate-900 border border-slate-800 hover:border-cyan-500/50 transition-all cursor-pointer group space-y-2"
+                      >
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="text-cyan-400 font-bold uppercase">{d.label}</span>
+                          <span className="font-black text-white bg-indigo-500/20 px-2 py-0.5 rounded border border-indigo-500/30 truncate max-w-[100px]">
+                            {d.correctTerm}
+                          </span>
+                        </div>
+                        {d.imageUrl ? (
+                          <div className="h-28 rounded-lg overflow-hidden border border-slate-800 bg-black/50 flex items-center justify-center relative">
+                            <img
+                              src={getFullImageUrl(d.imageUrl)}
+                              alt={d.correctTerm}
+                              className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-200"
+                            />
+                            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <Maximize2 className="w-4 h-4 text-cyan-300" />
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="h-28 rounded-lg bg-slate-950 text-slate-500 text-[10px] flex items-center justify-center">
+                            No image
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : currentQuestionData.round === 2 && currentQuestionData.round2ImageUrl ? (
                 <div className="rounded-2xl overflow-hidden border border-slate-700 bg-slate-950 p-3 space-y-2.5 shadow-xl">
                   <div className="flex items-center justify-between px-1 text-xs font-bold text-slate-300">
                     <span className="flex items-center gap-1.5 text-cyan-400">
@@ -521,7 +572,10 @@ export const LiveControlRoom: React.FC = () => {
                     </span>
                     <button
                       type="button"
-                      onClick={() => setIsR2ImageZoomed(true)}
+                      onClick={() => {
+                        setZoomImageSrc(currentQuestionData.round2ImageUrl || null);
+                        setIsR2ImageZoomed(true);
+                      }}
                       className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-semibold flex items-center gap-1.5 transition-colors border border-slate-700"
                     >
                       <Maximize2 className="w-3.5 h-3.5 text-indigo-400" />
@@ -530,7 +584,10 @@ export const LiveControlRoom: React.FC = () => {
                   </div>
                   <div
                     className="relative flex items-center justify-center bg-black/60 rounded-xl overflow-hidden cursor-pointer group p-1"
-                    onClick={() => setIsR2ImageZoomed(true)}
+                    onClick={() => {
+                      setZoomImageSrc(currentQuestionData.round2ImageUrl || null);
+                      setIsR2ImageZoomed(true);
+                    }}
                   >
                     <img
                       src={getFullImageUrl(currentQuestionData.round2ImageUrl)}
@@ -544,14 +601,11 @@ export const LiveControlRoom: React.FC = () => {
                     </div>
                   </div>
                 </div>
-              )}
-
-              {/* Round 2 Missing Image Notice */}
-              {currentQuestionData.round === 2 && !currentQuestionData.round2ImageUrl && (
+              ) : currentQuestionData.round === 2 ? (
                 <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-xs text-amber-300">
                   <div className="flex items-center gap-2">
                     <AlertTriangle className="w-4 h-4 shrink-0 text-amber-400" />
-                    <span>No defect image uploaded for this question yet.</span>
+                    <span>No defect images uploaded for this question yet.</span>
                   </div>
                   <Link
                     to="/admin/questions"
@@ -560,7 +614,7 @@ export const LiveControlRoom: React.FC = () => {
                     Upload in Question Bank
                   </Link>
                 </div>
-              )}
+              ) : null}
 
               {/* If completed, show the official answer clearly below the question */}
               {isSelectedCompleted && (
@@ -1141,10 +1195,13 @@ export const LiveControlRoom: React.FC = () => {
       />
 
       {/* Zoom Modal for Round 2 Defect Image in Admin Live Control */}
-      {isR2ImageZoomed && currentQuestionData?.round2ImageUrl && (
+      {isR2ImageZoomed && (zoomImageSrc || currentQuestionData?.round2ImageUrl) && (
         <div
           className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in"
-          onClick={() => setIsR2ImageZoomed(false)}
+          onClick={() => {
+            setIsR2ImageZoomed(false);
+            setZoomImageSrc(null);
+          }}
         >
           <div
             className="relative max-w-5xl max-h-[92vh] overflow-auto rounded-3xl border border-slate-700 p-4 bg-slate-950 shadow-2xl"
@@ -1157,14 +1214,17 @@ export const LiveControlRoom: React.FC = () => {
               </span>
               <button
                 type="button"
-                onClick={() => setIsR2ImageZoomed(false)}
+                onClick={() => {
+                  setIsR2ImageZoomed(false);
+                  setZoomImageSrc(null);
+                }}
                 className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs border border-slate-700 transition-colors"
               >
                 ✕ Close Zoom
               </button>
             </div>
             <img
-              src={getFullImageUrl(currentQuestionData.round2ImageUrl)}
+              src={getFullImageUrl(zoomImageSrc || currentQuestionData?.round2ImageUrl)}
               alt="Zoomed Defect"
               className="w-full max-h-[78vh] object-contain rounded-2xl mx-auto"
             />

@@ -39,12 +39,17 @@ export const QuestionBank: React.FC = () => {
   const [r1Seq3, setR1Seq3] = useState<string>('C');
   const [r1Seq4, setR1Seq4] = useState<string>('D');
 
-  // Round 2 State (Defect image & 4 defect zones)
+  // Round 2 State (4 zones & 4 images)
   const [r2ImageUrl, setR2ImageUrl] = useState<string>('');
   const [r2Zone1Term, setR2Zone1Term] = useState<string>('');
   const [r2Zone2Term, setR2Zone2Term] = useState<string>('');
   const [r2Zone3Term, setR2Zone3Term] = useState<string>('');
   const [r2Zone4Term, setR2Zone4Term] = useState<string>('');
+  const [r2Zone1Image, setR2Zone1Image] = useState<string>('');
+  const [r2Zone2Image, setR2Zone2Image] = useState<string>('');
+  const [r2Zone3Image, setR2Zone3Image] = useState<string>('');
+  const [r2Zone4Image, setR2Zone4Image] = useState<string>('');
+  const [uploadingZoneId, setUploadingZoneId] = useState<string | null>(null);
   const [r2ExtraTerms, setR2ExtraTerms] = useState<string>('');
 
   // Round 3 State (4 options & correct checkboxes)
@@ -118,6 +123,10 @@ export const QuestionBank: React.FC = () => {
     setR2Zone2Term('');
     setR2Zone3Term('');
     setR2Zone4Term('');
+    setR2Zone1Image('');
+    setR2Zone2Image('');
+    setR2Zone3Image('');
+    setR2Zone4Image('');
     setR2ExtraTerms('');
 
     // Reset R3
@@ -156,10 +165,21 @@ export const QuestionBank: React.FC = () => {
     // R2
     if (q.round === 2) {
       setR2ImageUrl(q.round2ImageUrl || '');
-      setR2Zone1Term(q.round2Defects?.find(d => d.id === '1')?.correctTerm || '');
-      setR2Zone2Term(q.round2Defects?.find(d => d.id === '2')?.correctTerm || '');
-      setR2Zone3Term(q.round2Defects?.find(d => d.id === '3')?.correctTerm || '');
-      setR2Zone4Term(q.round2Defects?.find(d => d.id === '4')?.correctTerm || '');
+      const z1 = q.round2Defects?.find(d => d.id === '1');
+      const z2 = q.round2Defects?.find(d => d.id === '2');
+      const z3 = q.round2Defects?.find(d => d.id === '3');
+      const z4 = q.round2Defects?.find(d => d.id === '4');
+
+      setR2Zone1Term(z1?.correctTerm || '');
+      setR2Zone2Term(z2?.correctTerm || '');
+      setR2Zone3Term(z3?.correctTerm || '');
+      setR2Zone4Term(z4?.correctTerm || '');
+
+      setR2Zone1Image(z1?.imageUrl || q.round2ImageUrl || '');
+      setR2Zone2Image(z2?.imageUrl || '');
+      setR2Zone3Image(z3?.imageUrl || '');
+      setR2Zone4Image(z4?.imageUrl || '');
+
       const terms = q.round2TermOptions || [];
       setR2ExtraTerms(terms.join(', '));
     }
@@ -197,6 +217,33 @@ export const QuestionBank: React.FC = () => {
       setErrorMessage(`Upload error: ${err.message}`);
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const handleZoneImageUpload = async (zoneId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingZoneId(zoneId);
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      const res = await api.uploadImage(formData);
+      if (res.success && res.imageUrl) {
+        if (zoneId === '1') setR2Zone1Image(res.imageUrl);
+        else if (zoneId === '2') setR2Zone2Image(res.imageUrl);
+        else if (zoneId === '3') setR2Zone3Image(res.imageUrl);
+        else if (zoneId === '4') setR2Zone4Image(res.imageUrl);
+        if (!r2ImageUrl) setR2ImageUrl(res.imageUrl);
+        setFeedback(`Zone #${zoneId} image uploaded successfully!`);
+      } else {
+        setErrorMessage(`Failed to upload image for Zone #${zoneId}.`);
+      }
+    } catch (err: any) {
+      setErrorMessage(`Upload error: ${err.message}`);
+    } finally {
+      setUploadingZoneId(null);
     }
   };
 
@@ -268,12 +315,12 @@ export const QuestionBank: React.FC = () => {
         ])
       );
 
-      payload.round2ImageUrl = r2ImageUrl.trim();
+      payload.round2ImageUrl = r2Zone1Image.trim() || r2ImageUrl.trim();
       payload.round2Defects = [
-        { id: '1', label: 'Zone #1', correctTerm: r2Zone1Term.trim() },
-        { id: '2', label: 'Zone #2', correctTerm: r2Zone2Term.trim() },
-        { id: '3', label: 'Zone #3', correctTerm: r2Zone3Term.trim() },
-        { id: '4', label: 'Zone #4', correctTerm: r2Zone4Term.trim() }
+        { id: '1', label: 'Zone #1', correctTerm: r2Zone1Term.trim(), imageUrl: r2Zone1Image.trim() },
+        { id: '2', label: 'Zone #2', correctTerm: r2Zone2Term.trim(), imageUrl: r2Zone2Image.trim() },
+        { id: '3', label: 'Zone #3', correctTerm: r2Zone3Term.trim(), imageUrl: r2Zone3Image.trim() },
+        { id: '4', label: 'Zone #4', correctTerm: r2Zone4Term.trim(), imageUrl: r2Zone4Image.trim() }
       ];
       payload.round2TermOptions = allTerms;
     }
@@ -482,18 +529,40 @@ export const QuestionBank: React.FC = () => {
 
               {/* R2 Image & Defects Preview */}
               {q.round === 2 && (
-                <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-850 space-y-2">
-                  {q.round2ImageUrl && (
-                    <img
-                      src={getFullImageUrl(q.round2ImageUrl)}
-                      alt="Defect Preview"
-                      className="w-32 h-20 object-cover rounded-lg border border-slate-700"
-                    />
-                  )}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+                <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-850 space-y-3">
+                  <span className="text-xs font-bold uppercase text-slate-400 block">
+                    4 Zones &amp; Correct Images:
+                  </span>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                     {q.round2Defects?.map(d => (
-                      <div key={d.id} className="p-1.5 rounded bg-slate-950 text-slate-300">
-                        <span className="text-cyan-400 font-bold">{d.label}:</span> {d.correctTerm}
+                      <div key={d.id} className="p-2 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="text-cyan-400 font-bold">{d.label}</span>
+                          <span className="font-extrabold text-white bg-slate-850 px-1.5 py-0.5 rounded border border-slate-700">
+                            {d.correctTerm}
+                          </span>
+                        </div>
+                        {d.imageUrl ? (
+                          <div className="h-20 rounded-lg overflow-hidden border border-slate-800 bg-black/40 flex items-center justify-center">
+                            <img
+                              src={getFullImageUrl(d.imageUrl)}
+                              alt={d.label}
+                              className="w-full h-full object-contain"
+                            />
+                          </div>
+                        ) : q.round2ImageUrl ? (
+                          <div className="h-20 rounded-lg overflow-hidden border border-slate-800 bg-black/40 flex items-center justify-center">
+                            <img
+                              src={getFullImageUrl(q.round2ImageUrl)}
+                              alt="Defect"
+                              className="w-full h-full object-contain"
+                            />
+                          </div>
+                        ) : (
+                          <div className="h-16 rounded-lg bg-slate-900 text-slate-500 text-[10px] flex items-center justify-center">
+                            No image
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -676,72 +745,84 @@ export const QuestionBank: React.FC = () => {
                 </div>
               )}
 
-              {/* ROUND 2 SPECIFIC INPUTS */}
+              {/* ROUND 2 SPECIFIC INPUTS: 4 Zones & 4 Images */}
               {formRound === 2 && (
                 <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
-                  <span className="text-xs font-extrabold uppercase text-cyan-400 block">
-                    Round 2: Defect Photograph &amp; Defect Zone Terminology
-                  </span>
-
                   <div>
-                    <label className="block text-xs font-bold uppercase text-slate-300 mb-1">
-                      Defect Image (Upload File or Enter URL)
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        className="text-xs text-slate-400 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-indigo-600 file:text-white"
-                      />
-                      {isUploading && <span className="text-xs text-amber-400 animate-pulse">Uploading...</span>}
-                    </div>
-                    <input
-                      type="text"
-                      value={r2ImageUrl}
-                      onChange={e => setR2ImageUrl(e.target.value)}
-                      placeholder="Or enter image URL e.g. /uploads/defect-pcb.svg"
-                      className="w-full mt-2 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none"
-                    />
+                    <span className="text-xs font-extrabold uppercase text-cyan-400 block">
+                      Round 2: 4 Zones &amp; 4 Images (Image Arrangement Challenge)
+                    </span>
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      Provide 4 target names (e.g. Cat, Car, Ball, Dog) and upload an image for each. Participants will see the images scrambled and must arrange them into the correct order.
+                    </p>
                   </div>
 
-                  <div className="space-y-2">
-                    <label className="block text-xs font-bold uppercase text-slate-300">
-                      Correct Defect Terms for the 4 Inspected Zones:
-                    </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {[
-                        { label: 'Zone #1', val: r2Zone1Term, set: setR2Zone1Term, placeholder: 'e.g. Solder Bridging' },
-                        { label: 'Zone #2', val: r2Zone2Term, set: setR2Zone2Term, placeholder: 'e.g. Cold Solder Joint' },
-                        { label: 'Zone #3', val: r2Zone3Term, set: setR2Zone3Term, placeholder: 'e.g. Tombstoning' },
-                        { label: 'Zone #4', val: r2Zone4Term, set: setR2Zone4Term, placeholder: 'e.g. Missing Component' }
-                      ].map((zone, idx) => (
-                        <div key={idx} className="flex items-center gap-2">
-                          <span className="w-16 text-xs font-bold text-cyan-400 shrink-0">{zone.label}:</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    {[
+                      { id: '1', label: 'Zone #1', name: r2Zone1Term, setName: setR2Zone1Term, img: r2Zone1Image, setImg: setR2Zone1Image, placeholder: 'e.g. Cat' },
+                      { id: '2', label: 'Zone #2', name: r2Zone2Term, setName: setR2Zone2Term, img: r2Zone2Image, setImg: setR2Zone2Image, placeholder: 'e.g. Car' },
+                      { id: '3', label: 'Zone #3', name: r2Zone3Term, setName: setR2Zone3Term, img: r2Zone3Image, setImg: setR2Zone3Image, placeholder: 'e.g. Ball' },
+                      { id: '4', label: 'Zone #4', name: r2Zone4Term, setName: setR2Zone4Term, img: r2Zone4Image, setImg: setR2Zone4Image, placeholder: 'e.g. Dog' }
+                    ].map(zone => (
+                      <div key={zone.id} className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-extrabold text-cyan-400 uppercase">{zone.label}</span>
+                          {zone.img && (
+                            <span className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
+                              ✓ Image ready
+                            </span>
+                          )}
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">
+                            Target Name / Answer:
+                          </label>
                           <input
                             type="text"
                             required
-                            value={zone.val}
-                            onChange={e => zone.set(e.target.value)}
+                            value={zone.name}
+                            onChange={e => zone.setName(e.target.value)}
                             placeholder={zone.placeholder}
-                            className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none"
+                            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-semibold"
                           />
                         </div>
-                      ))}
-                    </div>
-                  </div>
 
-                  <div>
-                    <label className="block text-xs font-bold uppercase text-slate-300 mb-1">
-                      Additional Distractor Term Options <span className="text-slate-500">(Comma-separated)</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={r2ExtraTerms}
-                      onChange={e => setR2ExtraTerms(e.target.value)}
-                      placeholder="e.g. Solder Balling, Solder Beading, Pinholes"
-                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none"
-                    />
+                        <div>
+                          <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">
+                            Upload Image for {zone.label}:
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={e => handleZoneImageUpload(zone.id, e)}
+                              className="text-xs text-slate-400 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-cyan-600 file:text-white"
+                            />
+                            {uploadingZoneId === zone.id && (
+                              <span className="text-[11px] text-amber-400 animate-pulse">Uploading...</span>
+                            )}
+                          </div>
+                          <input
+                            type="text"
+                            value={zone.img}
+                            onChange={e => zone.setImg(e.target.value)}
+                            placeholder="Or image URL e.g. /uploads/image.png"
+                            className="w-full mt-1.5 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-[11px] text-slate-300 placeholder-slate-500 focus:outline-none font-mono"
+                          />
+                        </div>
+
+                        {zone.img && (
+                          <div className="mt-2 h-24 rounded-lg overflow-hidden border border-slate-700 bg-black/40 flex items-center justify-center">
+                            <img
+                              src={getFullImageUrl(zone.img)}
+                              alt={`${zone.label} preview`}
+                              className="w-full h-full object-contain"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}

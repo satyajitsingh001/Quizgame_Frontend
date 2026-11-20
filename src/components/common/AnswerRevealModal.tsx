@@ -332,16 +332,27 @@ export const AnswerRevealModal: React.FC<AnswerRevealModalProps> = ({
                   {question.round2Defects.map(d => (
                     <div
                       key={d.id}
-                      className="p-3.5 rounded-xl bg-slate-900 border border-emerald-500/40 flex items-center justify-between gap-3 transition-transform hover:scale-[1.01]"
+                      className="p-3 rounded-xl bg-slate-900 border border-emerald-500/40 space-y-2 transition-transform hover:scale-[1.01]"
                     >
-                      <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-cyan-400" />
-                        {d.label}
-                      </span>
-                      <span className="text-xs font-black text-emerald-300 bg-emerald-500/20 px-3 py-1 rounded-lg border border-emerald-500/40 flex items-center gap-1.5">
-                        <Check className="w-3.5 h-3.5 text-emerald-400" />
-                        {d.correctTerm}
-                      </span>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-cyan-400" />
+                          {d.label}
+                        </span>
+                        <span className="text-xs font-black text-emerald-300 bg-emerald-500/20 px-2.5 py-0.5 rounded-lg border border-emerald-500/40 flex items-center gap-1">
+                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                          {d.correctTerm}
+                        </span>
+                      </div>
+                      {d.imageUrl && (
+                        <div className="h-24 rounded-lg overflow-hidden border border-slate-800 bg-black/50 flex items-center justify-center">
+                          <img
+                            src={getFullImageUrl(d.imageUrl)}
+                            alt={d.correctTerm}
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
