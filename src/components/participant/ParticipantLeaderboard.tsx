@@ -196,8 +196,7 @@ export const ParticipantLeaderboard: React.FC = () => {
               <thead className="bg-slate-900/60 text-[11px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800">
                 <tr>
                   <th className="py-3.5 px-4 text-center">Rank</th>
-                  <th className="py-3.5 px-4">Team</th>
-                  <th className="py-3.5 px-4 hidden sm:table-cell">Captain</th>
+                  <th className="py-3.5 px-4">Participant</th>
                   <th className="py-3.5 px-4 text-center">Round 1</th>
                   <th className="py-3.5 px-4 text-center">Round 2</th>
                   <th className="py-3.5 px-4 text-center">Round 3</th>
@@ -207,8 +206,8 @@ export const ParticipantLeaderboard: React.FC = () => {
               <tbody className="divide-y divide-slate-800/60">
                 {leaderboard.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-slate-500">
-                      No participating teams registered yet.
+                    <td colSpan={6} className="py-8 text-center text-slate-500">
+                      No participants registered yet.
                     </td>
                   </tr>
                 ) : (
@@ -220,9 +219,6 @@ export const ParticipantLeaderboard: React.FC = () => {
                       <td className="py-3.5 px-4">
                         <div className="font-bold text-white leading-tight">{item.teamName}</div>
                         <div className="text-xs text-slate-400 font-mono mt-0.5">{item.teamId}</div>
-                      </td>
-                      <td className="py-3.5 px-4 hidden sm:table-cell text-slate-300">
-                        {item.captainName}
                       </td>
                       <td className="py-3.5 px-4 text-center font-mono text-slate-300">
                         {item.round1Score}
@@ -256,15 +252,14 @@ export const ParticipantLeaderboard: React.FC = () => {
               <thead className="bg-slate-900/60 text-[11px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800">
                 <tr>
                   <th className="py-3.5 px-4 text-center">Rank</th>
-                  <th className="py-3.5 px-4">Team</th>
-                  <th className="py-3.5 px-4">Captain</th>
+                  <th className="py-3.5 px-4">Participant</th>
                   <th className="py-3.5 px-4 text-right">Round {activeTab} Points</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
                 {roundLeaderboard.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="py-8 text-center text-slate-500">
+                    <td colSpan={3} className="py-8 text-center text-slate-500">
                       No scored questions for Round {activeTab} yet.
                     </td>
                   </tr>
@@ -278,7 +273,6 @@ export const ParticipantLeaderboard: React.FC = () => {
                         <div className="font-bold text-white">{item.teamName}</div>
                         <div className="text-xs text-slate-400 font-mono">{item.teamId}</div>
                       </td>
-                      <td className="py-3.5 px-4 text-slate-300">{item.captainName}</td>
                       <td className="py-3.5 px-4 text-right">
                         <span className="font-mono font-black text-indigo-400 text-base">
                           {item.score} PTS

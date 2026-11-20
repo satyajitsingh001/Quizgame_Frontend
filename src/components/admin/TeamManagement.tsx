@@ -87,7 +87,7 @@ export const TeamManagement: React.FC = () => {
   const filteredTeams = teams.filter(t =>
     t.teamName.toLowerCase().includes(searchQuery.toLowerCase()) ||
     t.teamId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    t.captainName.toLowerCase().includes(searchQuery.toLowerCase())
+    (t.contactNumber && t.contactNumber.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   return (
@@ -151,9 +151,8 @@ export const TeamManagement: React.FC = () => {
             <thead className="bg-slate-900/80 text-[11px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800">
               <tr>
                 <th className="py-3.5 px-4">ID</th>
-                <th className="py-3.5 px-4">Team Name</th>
-                <th className="py-3.5 px-4">Nominated Captain</th>
-                <th className="py-3.5 px-4 hidden md:table-cell">5 Roster Members</th>
+                <th className="py-3.5 px-4">Participant Name</th>
+                <th className="py-3.5 px-4">Contact</th>
                 <th className="py-3.5 px-4">PIN</th>
                 <th className="py-3.5 px-4 text-center">Status</th>
                 <th className="py-3.5 px-4 text-right">Actions</th>
@@ -162,8 +161,8 @@ export const TeamManagement: React.FC = () => {
             <tbody className="divide-y divide-slate-800/60">
               {filteredTeams.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-slate-500">
-                    No teams registered yet.
+                  <td colSpan={6} className="py-8 text-center text-slate-500">
+                    No participants registered yet.
                   </td>
                 </tr>
               ) : (
@@ -175,14 +174,8 @@ export const TeamManagement: React.FC = () => {
                     <td className="py-3.5 px-4 font-bold text-white">
                       {team.teamName}
                     </td>
-                    <td className="py-3.5 px-4 text-slate-200">
-                      <span className="flex items-center gap-1.5">
-                        <UserCheck className="w-3.5 h-3.5 text-amber-400" />
-                        <span>{team.captainName}</span>
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 hidden md:table-cell text-xs text-slate-400">
-                      {team.members.map(m => m.name).join(', ')}
+                    <td className="py-3.5 px-4 text-xs text-slate-300">
+                      {team.contactNumber || '—'}
                     </td>
                     <td className="py-3.5 px-4 font-mono text-xs text-slate-400">
                       {team.pin || '••••'}
@@ -259,7 +252,7 @@ export const TeamManagement: React.FC = () => {
 
             <form onSubmit={handleSaveEdit} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase text-slate-300 mb-1">Team Name</label>
+                <label className="block text-xs font-bold uppercase text-slate-300 mb-1">Participant Name</label>
                 <input
                   type="text"
                   required
@@ -270,12 +263,12 @@ export const TeamManagement: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase text-slate-300 mb-1">Nominated Captain</label>
+                <label className="block text-xs font-bold uppercase text-slate-300 mb-1">Contact Number</label>
                 <input
                   type="text"
-                  required
-                  value={editingTeam.captainName}
-                  onChange={e => setEditingTeam({ ...editingTeam, captainName: e.target.value })}
+                  value={editingTeam.contactNumber || ''}
+                  onChange={e => setEditingTeam({ ...editingTeam, contactNumber: e.target.value })}
+                  placeholder="Optional contact number"
                   className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-sm text-white focus:outline-none"
                 />
               </div>

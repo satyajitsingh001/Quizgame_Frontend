@@ -48,16 +48,16 @@ export const TeamLogin: React.FC = () => {
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 mb-3">
             <Users className="w-7 h-7" />
           </div>
-          <h1 className="text-2xl font-black text-white">Team Participant Login</h1>
+          <h1 className="text-2xl font-black text-white">Participant Login</h1>
           <p className="text-xs text-slate-400 mt-1">
-            Sign in with your registered Team ID and 4-digit PIN
+            Sign in with your registered Login ID and 4-digit PIN
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
-              Team ID
+              Login ID
             </label>
             <input
               type="text"

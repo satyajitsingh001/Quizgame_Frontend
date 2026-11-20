@@ -38,3 +38,65 @@
 .pulse-timer {
   animation: pulse-ring 1s infinite ease-in-out;
 }
+
+/* Reveal Modal & Answer Key Animations */
+@keyframes modal-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.92) translateY(16px);
+  }
+  60% {
+    transform: scale(1.02) translateY(-2px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes overlay-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes answer-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.25), inset 0 0 15px rgba(16, 185, 129, 0.08);
+    border-color: rgba(52, 211, 153, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 35px rgba(16, 185, 129, 0.5), inset 0 0 25px rgba(16, 185, 129, 0.18);
+    border-color: rgba(52, 211, 153, 0.95);
+  }
+}
+
+@keyframes slide-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-modal-pop {
+  animation: modal-pop 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-overlay-fade {
+  animation: overlay-fade 0.25s ease-out forwards;
+}
+
+.animate-answer-glow {
+  animation: answer-glow 2.5s infinite ease-in-out;
+}
+
+.animate-slide-in-up {
+  animation: slide-in-up 0.35s ease-out forwards;
+}

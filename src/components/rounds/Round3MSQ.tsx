@@ -55,7 +55,7 @@ export const Round3MSQ: React.FC<Round3MSQProps> = ({ question, isSubmitted, onS
 
   return (
     <div className="space-y-6">
-      {/* Captain Participation Banner */}
+      {/* Active Participant Banner */}
       <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/20 via-purple-500/20 to-indigo-500/20 border border-amber-500/30 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-amber-500/30 border border-amber-500/50 flex items-center justify-center shrink-0">
@@ -64,12 +64,12 @@ export const Round3MSQ: React.FC<Round3MSQProps> = ({ question, isSubmitted, onS
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xs uppercase font-extrabold tracking-wider px-2 py-0.5 rounded bg-amber-500/30 text-amber-300">
-                CAPTAIN'S ROUND
+                ROUND 3 : MSQ
               </span>
-              <span className="text-xs text-slate-300">Round 3 Active Participant</span>
+              <span className="text-xs text-slate-300">Multiple Select Challenge</span>
             </div>
             <p className="text-sm font-bold text-white mt-0.5">
-              Nominated Captain: <span className="text-amber-300">{team?.captainName || 'Team Captain'}</span>
+              Participant: <span className="text-amber-300">{team?.teamName || 'Active Participant'}</span>
             </p>
           </div>
         </div>
@@ -183,7 +183,7 @@ export const Round3MSQ: React.FC<Round3MSQProps> = ({ question, isSubmitted, onS
             ) : (
               <>
                 <Lock className="w-4 h-4" />
-                <span>Submit &amp; Lock Captain Answer</span>
+                <span>Submit &amp; Lock Answer</span>
               </>
             )}
           </button>

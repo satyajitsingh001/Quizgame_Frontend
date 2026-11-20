@@ -9,13 +9,15 @@ import {
   ChevronRight,
   AlertTriangle,
   RefreshCw,
-  Radio
+  Radio,
+  Sparkles
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { api } from '../../services/api';
 import { useGame } from '../../context/GameContext';
 import { Question, Team } from '../../types';
 import { Timer } from '../common/Timer';
+import { AnswerRevealModal } from '../common/AnswerRevealModal';
 
 export const LiveControlRoom: React.FC = () => {
   const { gameState, fetchGameState, remainingSeconds } = useGame();
@@ -25,10 +27,29 @@ export const LiveControlRoom: React.FC = () => {
 
   const [approvedTeams, setApprovedTeams] = useState<Team[]>([]);
   const [liveSubmissions, setLiveSubmissions] = useState<any[]>([]);
+  const [teamScoresMap, setTeamScoresMap] = useState<Record<string, number>>({});
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
   const [actionMessage, setActionMessage] = useState('');
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isRevealModalOpen, setIsRevealModalOpen] = useState(false);
+
+  // Load team cumulative scores across the competition
+  const loadLeaderboardScores = async () => {
+    try {
+      const res = await api.getLeaderboard();
+      if (res.success && res.leaderboard) {
+        const scoreMap: Record<string, number> = {};
+        res.leaderboard.forEach((item: any) => {
+          if (item.teamMongoId) scoreMap[item.teamMongoId] = item.totalScore;
+          if (item.teamId) scoreMap[item.teamId] = item.totalScore;
+        });
+        setTeamScoresMap(prev => ({ ...prev, ...scoreMap }));
+      }
+    } catch {
+      // ignore
+    }
+  };
 
   // Load approved teams
   const loadTeams = async () => {
@@ -37,6 +58,7 @@ export const LiveControlRoom: React.FC = () => {
       if (res.success && res.teams) {
         setApprovedTeams(res.teams.filter((t: Team) => t.status === 'approved'));
       }
+      await loadLeaderboardScores();
     } catch {
       // ignore
     }
@@ -65,7 +87,11 @@ export const LiveControlRoom: React.FC = () => {
       const res = await api.getQuestionSubmissions(questionId);
       if (res.success && res.submissions) {
         setLiveSubmissions(res.submissions);
+        if (res.teamScoresMap) {
+          setTeamScoresMap(prev => ({ ...prev, ...res.teamScoresMap }));
+        }
       }
+      await loadLeaderboardScores();
     } catch {
       // ignore
     }
@@ -75,6 +101,7 @@ export const LiveControlRoom: React.FC = () => {
     setIsRefreshing(true);
     await fetchGameState();
     await loadTeams();
+    await loadLeaderboardScores();
     if (currentQuestionData?._id) {
       await loadSubmissions(currentQuestionData._id);
     }
@@ -174,11 +201,16 @@ export const LiveControlRoom: React.FC = () => {
     try {
       const res = await api.revealAnswer();
       if (res.success) {
-        await fetchGameState();
-        if (currentQuestionData?._id) {
-          await loadSubmissions(currentQuestionData._id);
+        if (res.question) {
+          setCurrentQuestionData(res.question);
         }
+        await fetchGameState();
+        if (currentQuestionData?._id || res.question?._id) {
+          await loadSubmissions(res.question?._id || currentQuestionData?._id);
+        }
+        await loadLeaderboardScores();
         setActionMessage('Answers evaluated and revealed to all participants!');
+        setIsRevealModalOpen(true);
       }
     } catch (err: any) {
       setActionMessage(`Error: ${err.message}`);
@@ -221,10 +253,24 @@ export const LiveControlRoom: React.FC = () => {
     gameState?.currentQuestionNumber === selectedQuestionNum &&
     gameState?.questionStatus === 'PAUSED';
 
+  const isCurrentEnded =
+    gameState?.currentRound === selectedRound &&
+    gameState?.currentQuestionNumber === selectedQuestionNum &&
+    gameState?.questionStatus === 'ENDED';
+
   const isCurrentRevealed =
     gameState?.currentRound === selectedRound &&
     gameState?.currentQuestionNumber === selectedQuestionNum &&
     gameState?.questionStatus === 'REVEALED';
+
+  const isSelectedCompleted =
+    isCurrentRevealed ||
+    gameState?.completedQuestions?.some(
+      cq => Number(cq.round) === Number(selectedRound) && Number(cq.questionNumber) === Number(selectedQuestionNum)
+    ) ||
+    liveSubmissions?.some(
+      s => s.isEvaluated && Number(s.round) === Number(selectedRound) && Number(s.questionNumber) === Number(selectedQuestionNum)
+    );
 
   const submissionPercentage =
     approvedTeams.length > 0
@@ -322,20 +368,35 @@ export const LiveControlRoom: React.FC = () => {
           const isSelected = selectedQuestionNum === qNum;
           const isActiveQ =
             gameState?.currentRound === selectedRound && gameState?.currentQuestionNumber === qNum;
+          const isQCompleted =
+            (gameState?.currentRound === selectedRound &&
+              gameState?.currentQuestionNumber === qNum &&
+              gameState?.questionStatus === 'REVEALED') ||
+            gameState?.completedQuestions?.some(
+              cq => Number(cq.round) === Number(selectedRound) && Number(cq.questionNumber) === Number(qNum)
+            );
 
           return (
             <button
               key={qNum}
               type="button"
               onClick={() => setSelectedQuestionNum(qNum)}
-              className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 ${
+              className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 ${
                 isSelected
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 ring-2 ring-indigo-400'
+                  : isQCompleted
+                  ? 'bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-900/40'
                   : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
               }`}
             >
-              {isActiveQ && <Radio className="w-3 h-3 text-emerald-400" />}
+              {isActiveQ && <Radio className="w-3 h-3 text-emerald-400 animate-pulse" />}
+              {isQCompleted && !isActiveQ && <CheckCircle2 className="w-3 h-3 text-emerald-400" />}
               <span>Q{qNum}</span>
+              {isQCompleted && (
+                <span className="text-[9px] font-bold uppercase px-1 rounded bg-emerald-500/20 text-emerald-300">
+                  Done
+                </span>
+              )}
             </button>
           );
         })}
@@ -367,17 +428,114 @@ export const LiveControlRoom: React.FC = () => {
             <>
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
-                  <span className="text-xs uppercase font-extrabold tracking-wider px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300">
-                    Round {selectedRound} : Question {selectedQuestionNum}
-                  </span>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs uppercase font-extrabold tracking-wider px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300">
+                      Round {selectedRound} : Question {selectedQuestionNum}
+                    </span>
+                    {isSelectedCompleted && (
+                      <span className="text-xs uppercase font-black px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1.5 shadow-sm">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                        COMPLETED &amp; REVEALED
+                      </span>
+                    )}
+                  </div>
                   <h2 className="text-lg font-bold text-white mt-2 leading-snug">
                     {currentQuestionData.prompt}
                   </h2>
                 </div>
               </div>
 
-              {/* R1 Preview */}
-              {currentQuestionData.round1Activities && (
+              {/* If completed, show the official answer clearly below the question */}
+              {isSelectedCompleted && (
+                <div className="p-4 sm:p-5 rounded-2xl bg-slate-950/90 border border-emerald-500/50 shadow-xl shadow-emerald-950/30 space-y-3 animate-slide-in-up">
+                  <div className="flex items-center justify-between border-b border-emerald-500/20 pb-2.5">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                      <span className="text-xs font-black text-emerald-400 uppercase tracking-wider">
+                        Official Correct Answer Key (Completed)
+                      </span>
+                    </div>
+                    <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                      Verified
+                    </span>
+                  </div>
+
+                  {/* Round 1 Answer Order */}
+                  {currentQuestionData.round === 1 && currentQuestionData.round1CorrectOrder && (
+                    <div className="space-y-2">
+                      <span className="text-xs text-slate-300 font-bold block">Correct Sequence Order:</span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        {currentQuestionData.round1CorrectOrder.map((actId, idx) => {
+                          const act = currentQuestionData.round1Activities?.find(a => a.id === actId);
+                          return (
+                            <div key={actId} className="p-2.5 rounded-xl bg-slate-900 border border-emerald-500/40 flex items-center gap-2.5">
+                              <span className="w-6 h-6 rounded-lg bg-emerald-500 text-slate-950 font-black text-xs flex items-center justify-center shrink-0">
+                                #{idx + 1}
+                              </span>
+                              <span className="font-semibold text-white">
+                                <strong className="text-emerald-300">[{actId}]</strong> {act?.text || actId}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Round 2 Answer Defects */}
+                  {currentQuestionData.round === 2 && currentQuestionData.round2Defects && (
+                    <div className="space-y-2">
+                      <span className="text-xs text-slate-300 font-bold block">Correct Defect Mappings:</span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        {currentQuestionData.round2Defects.map(d => (
+                          <div key={d.id} className="p-2.5 rounded-xl bg-slate-900 border border-emerald-500/40 flex items-center justify-between gap-2">
+                            <span className="font-bold text-slate-300">{d.label}</span>
+                            <span className="font-black text-emerald-300 bg-emerald-500/20 px-2.5 py-0.5 rounded border border-emerald-500/30">
+                              {d.correctTerm}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Round 3 Answer MSQ */}
+                  {currentQuestionData.round === 3 && currentQuestionData.round3Options && (
+                    <div className="space-y-2">
+                      <span className="text-xs text-slate-300 font-bold block">Correct Option Combination:</span>
+                      <div className="space-y-1.5 text-xs">
+                        {currentQuestionData.round3Options.map(opt => {
+                          const isCorrect = currentQuestionData.round3CorrectOptions?.includes(opt.id);
+                          return (
+                            <div
+                              key={opt.id}
+                              className={`p-2.5 rounded-xl border flex items-center justify-between ${
+                                isCorrect
+                                  ? 'bg-emerald-950/40 border-emerald-500/50 text-white font-semibold'
+                                  : 'bg-slate-900/50 border-slate-800 text-slate-400 opacity-60'
+                              }`}
+                            >
+                              <span>
+                                <strong className="text-indigo-400 font-bold">[{opt.id}]</strong> {opt.text}
+                              </span>
+                              {isCorrect ? (
+                                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-emerald-500/25 text-emerald-300 border border-emerald-500/40">
+                                  CORRECT
+                                </span>
+                              ) : (
+                                <span className="text-[10px] text-slate-500">INCORRECT</span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* R1 Preview (if not completed) */}
+              {!isSelectedCompleted && currentQuestionData.round1Activities && (
                 <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
                   <span className="text-xs font-bold uppercase text-slate-400">Activities to Sequence:</span>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
@@ -393,8 +551,8 @@ export const LiveControlRoom: React.FC = () => {
                 </div>
               )}
 
-              {/* R2 Preview */}
-              {currentQuestionData.round === 2 && (
+              {/* R2 Preview (if not completed) */}
+              {!isSelectedCompleted && currentQuestionData.round === 2 && (
                 <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
                   <span className="text-xs font-bold uppercase text-slate-400">Defect Image &amp; Mapping:</span>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
@@ -407,8 +565,8 @@ export const LiveControlRoom: React.FC = () => {
                 </div>
               )}
 
-              {/* R3 Preview */}
-              {currentQuestionData.round3Options && (
+              {/* R3 Preview (if not completed) */}
+              {!isSelectedCompleted && currentQuestionData.round3Options && (
                 <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
                   <span className="text-xs font-bold uppercase text-slate-400">MSQ Options:</span>
                   <div className="grid grid-cols-1 gap-1.5 text-xs">
@@ -445,19 +603,37 @@ export const LiveControlRoom: React.FC = () => {
                 </span>
 
                 <div className="flex flex-wrap items-center gap-3">
-                  {!isCurrentActive && !isCurrentPaused && !isCurrentRevealed && (
-                    <button
-                      type="button"
-                      onClick={handleStartQuestion}
-                      disabled={isActionLoading}
-                      className="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm shadow-lg shadow-emerald-600/30 flex items-center gap-2 transition-transform active:scale-95"
-                    >
-                      <Play className="w-4 h-4 fill-white" />
-                      <span>Start Q{selectedQuestionNum} ({currentQuestionData.timerSeconds}s Timer)</span>
-                    </button>
-                  )}
+                  {/* Condition 1: Question is already COMPLETED / REVEALED -> NO START BUTTON EVER */}
+                  {isSelectedCompleted ? (
+                    <>
+                      <div className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 text-xs font-black shadow-lg shadow-emerald-950/30">
+                        <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                        <div>
+                          <span className="block text-white font-extrabold text-xs">QUESTION COMPLETED</span>
+                          <span className="text-[10px] text-emerald-400 font-semibold">Answer revealed &amp; evaluated. Cannot be started again.</span>
+                        </div>
+                      </div>
 
-                  {isCurrentActive && (
+                      <button
+                        type="button"
+                        onClick={() => setIsRevealModalOpen(true)}
+                        className="px-5 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600 hover:from-emerald-500 hover:to-indigo-500 text-white font-extrabold text-xs shadow-md shadow-emerald-600/30 flex items-center gap-1.5 transition-transform active:scale-95"
+                      >
+                        <Sparkles className="w-4 h-4 text-amber-300" />
+                        <span>Open Reveal Modal</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleNextQuestion}
+                        className="px-5 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center gap-1.5 transition-transform active:scale-95"
+                      >
+                        <span>Next Question</span>
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </>
+                  ) : isCurrentActive ? (
+                    /* Condition 2: Question is actively running */
                     <>
                       <button
                         type="button"
@@ -489,9 +665,8 @@ export const LiveControlRoom: React.FC = () => {
                         <span>Reveal Answer &amp; Score</span>
                       </button>
                     </>
-                  )}
-
-                  {isCurrentPaused && (
+                  ) : isCurrentPaused ? (
+                    /* Condition 3: Question is paused */
                     <>
                       <button
                         type="button"
@@ -513,31 +688,28 @@ export const LiveControlRoom: React.FC = () => {
                         <span>Reveal Answer &amp; Score</span>
                       </button>
                     </>
-                  )}
-
-                  {(isCurrentRevealed || gameState?.questionStatus === 'ENDED') && (
-                    <>
-                      {!isCurrentRevealed && (
-                        <button
-                          type="button"
-                          onClick={handleRevealAnswer}
-                          disabled={isActionLoading}
-                          className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex items-center gap-1.5"
-                        >
-                          <Eye className="w-4 h-4" />
-                          <span>Reveal Answer &amp; Score</span>
-                        </button>
-                      )}
-
-                      <button
-                        type="button"
-                        onClick={handleNextQuestion}
-                        className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center gap-1.5"
-                      >
-                        <span>Next Question</span>
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
-                    </>
+                  ) : isCurrentEnded ? (
+                    /* Condition 4: Question ended, awaiting reveal */
+                    <button
+                      type="button"
+                      onClick={handleRevealAnswer}
+                      disabled={isActionLoading}
+                      className="px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-sm shadow-lg shadow-purple-600/30 flex items-center gap-2 transition-transform active:scale-95"
+                    >
+                      <Eye className="w-4 h-4" />
+                      <span>Reveal Answer &amp; Score</span>
+                    </button>
+                  ) : (
+                    /* Condition 5: Unstarted question -> Show Start button */
+                    <button
+                      type="button"
+                      onClick={handleStartQuestion}
+                      disabled={isActionLoading}
+                      className="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm shadow-lg shadow-emerald-600/30 flex items-center gap-2 transition-transform active:scale-95"
+                    >
+                      <Play className="w-4 h-4 fill-white" />
+                      <span>Start Q{selectedQuestionNum} ({currentQuestionData.timerSeconds}s Timer)</span>
+                    </button>
                   )}
                 </div>
               </div>
@@ -601,23 +773,48 @@ export const LiveControlRoom: React.FC = () => {
                   const sub = liveSubmissions.find(
                     s => s.teamId?.teamId === t.teamId || s.teamId === t.teamId || s.teamId?._id === t._id
                   );
+                  const isEvaluated = isSelectedCompleted || isCurrentRevealed || sub?.isEvaluated;
+                  const questionScore = sub?.scoreResult?.totalScore;
+                  const teamTotalScore = teamScoresMap[t._id] ?? teamScoresMap[t.teamId] ?? 0;
 
                   return (
                     <div
                       key={t._id}
                       className={`py-2 px-3 rounded-xl border flex items-center justify-between text-xs transition-colors ${
-                        sub
+                        isEvaluated && questionScore !== undefined && questionScore > 0
+                          ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-200'
+                          : isEvaluated && questionScore !== undefined && questionScore < 0
+                          ? 'bg-red-950/30 border-red-500/40 text-red-200'
+                          : sub
                           ? 'bg-emerald-950/20 border-emerald-500/30 text-emerald-300'
                           : 'bg-slate-900/40 border-slate-800 text-slate-400'
                       }`}
                     >
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono font-bold text-slate-400">{t.teamId}</span>
-                        <span className="font-semibold text-white">{t.teamName}</span>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="font-mono font-bold text-slate-400 shrink-0">{t.teamId}</span>
+                        <span className="font-semibold text-white truncate max-w-[130px]">{t.teamName}</span>
                       </div>
 
-                      <div>
-                        {sub ? (
+                      <div className="flex items-center gap-2 shrink-0">
+                        {isEvaluated ? (
+                          <>
+                            {questionScore !== undefined ? (
+                              <span
+                                className={`font-mono font-black text-xs px-2 py-0.5 rounded-lg border ${
+                                  questionScore > 0
+                                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                                    : questionScore < 0
+                                    ? 'bg-red-500/20 text-red-300 border-red-500/40'
+                                    : 'bg-slate-800 text-slate-400 border-slate-700'
+                                }`}
+                              >
+                                {questionScore > 0 ? `+${questionScore}` : questionScore} PTS
+                              </span>
+                            ) : (
+                              <span className="text-[11px] font-mono text-slate-500">0 PTS</span>
+                            )}
+                          </>
+                        ) : sub ? (
                           <span className="font-mono font-bold text-emerald-400 flex items-center gap-1">
                             <CheckCircle2 className="w-3.5 h-3.5" />
                             <span>{sub.submissionTimeSeconds ?? '—'}s</span>
@@ -625,6 +822,10 @@ export const LiveControlRoom: React.FC = () => {
                         ) : (
                           <span className="text-[11px] text-slate-500 italic">Thinking...</span>
                         )}
+
+                        <span className="font-mono text-[11px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-lg">
+                          Total: {teamTotalScore}
+                        </span>
                       </div>
                     </div>
                   );
@@ -665,6 +866,16 @@ export const LiveControlRoom: React.FC = () => {
           </div>
         </div>
       )}
+      {/* Official Answer & Solution Reveal Modal for Quizmaster */}
+      <AnswerRevealModal
+        isOpen={isRevealModalOpen}
+        onClose={() => setIsRevealModalOpen(false)}
+        question={currentQuestionData}
+        teamSubmissions={liveSubmissions}
+        teamScoresMap={teamScoresMap}
+        isAdmin={true}
+        onNextQuestion={handleNextQuestion}
+      />
     </div>
   );
 };

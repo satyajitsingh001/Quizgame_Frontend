@@ -88,7 +88,7 @@ export const ScoreAdjuster: React.FC<ScoreAdjusterProps> = ({ isOpen, onClose, o
             >
               {teams.map(t => (
                 <option key={t._id} value={t._id}>
-                  {t.teamId} — {t.teamName} (Capt: {t.captainName})
+                  {t.teamId} — {t.teamName}
                 </option>
               ))}
             </select>

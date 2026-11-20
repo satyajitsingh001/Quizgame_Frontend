@@ -32,7 +32,7 @@ export const Home: React.FC = () => {
             className="py-3.5 px-8 rounded-2xl font-black text-sm text-white bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 shadow-xl shadow-indigo-600/30 flex items-center gap-2 transition-transform active:scale-95"
           >
             <Users className="w-4 h-4" />
-            <span>Register 5-Member Team</span>
+            <span>Register to Participate</span>
             <ArrowRight className="w-4 h-4" />
           </Link>
 
@@ -40,7 +40,7 @@ export const Home: React.FC = () => {
             to="/login"
             className="py-3.5 px-6 rounded-2xl font-bold text-sm text-slate-200 bg-slate-900 hover:bg-slate-850 border border-slate-700 flex items-center gap-2 transition-colors"
           >
-            <span>Team Login</span>
+            <span>Participant Login</span>
           </Link>
 
           <Link
@@ -107,9 +107,9 @@ export const Home: React.FC = () => {
             </div>
             <div>
               <span className="text-xs font-bold uppercase text-purple-400 tracking-wider">Round 3</span>
-              <h3 className="text-lg font-bold text-white mt-0.5">Quality MSQ (Captain's Round)</h3>
+              <h3 className="text-lg font-bold text-white mt-0.5">Quality MSQ (Multiple Select)</h3>
               <p className="text-xs text-slate-400 mt-2 leading-relaxed">
-                Nominated Team Captains answer rigorous Multiple-Select Questions. Exact correct option combination is required to earn +20 points.
+                Participants answer rigorous Multiple-Select Questions. Exact correct option combination is required to earn +20 points.
               </p>
             </div>
             <div className="pt-2 border-t border-slate-800 text-xs text-slate-300 font-semibold space-y-1">

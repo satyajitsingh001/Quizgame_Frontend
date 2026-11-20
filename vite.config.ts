@@ -9,11 +9,13 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'https://quizgame-wa2o.onrender.com',
+        // target: 'https://quizgame-backend-v1cz.onrender.com',
+        target: 'http://localhost:5001',
         changeOrigin: true
       },
       '/uploads': {
-        target: 'https://quizgame-wa2o.onrender.com',
+        // target: 'https://quizgame-backend-v1cz.onrender.com',
+        target: 'http://localhost:5001',
         changeOrigin: true
       }
     }

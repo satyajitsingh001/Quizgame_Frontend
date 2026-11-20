@@ -1,20 +1,10 @@
-export interface Member {
-  _id?: string;
-  name: string;
-  isCaptain: boolean;
-}
-
 export interface Team {
   _id: string;
   teamId: string;
   teamName: string;
-  members: Member[];
-  captainName: string;
   contactNumber?: string;
   pin?: string;
   status: 'approved' | 'pending' | 'rejected';
-  sessionToken?: string;
-  lastLoginAt?: string;
   createdAt: string;
 }
 
@@ -65,6 +55,12 @@ export interface GameState {
   endTime: string | null;
   remainingSeconds: number;
   isLeaderboardVisibleToTeams: boolean;
+  completedQuestions?: Array<{
+    round: number;
+    questionNumber: number;
+    questionId?: string;
+    completedAt?: string;
+  }>;
 }
 
 export interface SubmissionResponse {
@@ -95,8 +91,8 @@ export interface LeaderboardEntry {
   teamId: string;
   teamMongoId: string;
   teamName: string;
-  captainName: string;
-  members: string[];
+  captainName?: string;
+  members?: string[];
   round1Score: number;
   round2Score: number;
   round3Score: number;

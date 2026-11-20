@@ -35,8 +35,7 @@ export const AdminDashboard: React.FC = () => {
       const teamRes = await api.getAllTeams();
       if (teamRes.success && teamRes.teams) {
         setTeamsCount(teamRes.teams.length);
-        const membersTotal = teamRes.teams.reduce((acc: number, t: any) => acc + (t.members?.length || 5), 0);
-        setParticipantsCount(membersTotal);
+        setParticipantsCount(teamRes.teams.length);
       }
 
       const leadRes = await api.getLeaderboard();

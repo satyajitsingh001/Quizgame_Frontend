@@ -65,14 +65,6 @@ export const Navbar: React.FC = () => {
 
         {/* Right Navigation & User Controls */}
         <div className="flex items-center gap-2 sm:gap-3">
-          <Link
-            to="/leaderboard"
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 hover:bg-slate-800 text-amber-400 border border-amber-500/20 transition-all hover:border-amber-500/40"
-          >
-            <Trophy className="w-4 h-4 text-amber-400" />
-            <span className="hidden sm:inline">Leaderboard</span>
-          </Link>
-
           {role === 'ADMIN' ? (
             <div className="flex items-center gap-2">
               <Link
@@ -113,13 +105,13 @@ export const Navbar: React.FC = () => {
                 to="/login"
                 className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition-colors"
               >
-                Team Login
+                Login
               </Link>
               <Link
                 to="/register"
                 className="px-3 py-1.5 text-xs font-bold rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white shadow-md shadow-indigo-600/20 transition-all"
               >
-                Register Team
+                Register
               </Link>
               <Link
                 to="/admin/login"

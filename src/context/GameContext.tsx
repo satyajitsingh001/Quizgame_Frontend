@@ -3,12 +3,20 @@ import { api } from '../services/api';
 import { GameState, Question, SubmissionResponse } from '../types';
 import { useAuth } from './AuthContext';
 
+export interface TeamScores {
+  totalScore: number;
+  round1Score: number;
+  round2Score: number;
+  round3Score: number;
+}
+
 interface GameContextType {
   gameState: GameState | null;
   currentQuestion: Question | null;
   remainingSeconds: number;
   isSubmitted: boolean;
   submissionResponse: SubmissionResponse | null;
+  teamScores: TeamScores | null;
   revealedQuestion: Question | null;
   evaluatedResults: any[] | null;
   isFetchingState: boolean;
@@ -27,6 +35,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [remainingSeconds, setRemainingSeconds] = useState<number>(0);
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   const [submissionResponse, setSubmissionResponse] = useState<SubmissionResponse | null>(null);
+  const [teamScores, setTeamScores] = useState<TeamScores | null>(null);
   const [revealedQuestion, setRevealedQuestion] = useState<Question | null>(null);
   const [evaluatedResults, setEvaluatedResults] = useState<any[] | null>(null);
   const [isFetchingState, setIsFetchingState] = useState<boolean>(false);
@@ -70,6 +79,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else {
           setRemainingSeconds(0);
         }
+
+        // When state updates (especially on REVEALED), sync team submission & score ledger
+        if (team) {
+          checkMySubmissionStatus();
+        }
       }
     } catch {
       // offline or loading
@@ -88,6 +102,32 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         setIsSubmitted(false);
         setSubmissionResponse(null);
+      }
+      if (res.teamScores) {
+        setTeamScores(res.teamScores);
+      }
+    } catch {
+      // ignore
+    }
+
+    // Dual-sync with global leaderboard to guarantee 100% score consistency
+    try {
+      const lbRes = await api.getLeaderboard();
+      if (lbRes && Array.isArray(lbRes.leaderboard)) {
+        const teamCode = (team.teamId || '').toUpperCase();
+        const myTeam = lbRes.leaderboard.find(
+          (t: any) =>
+            (teamCode && t.teamId?.toUpperCase() === teamCode) ||
+            (team._id && (t.teamMongoId === team._id || t._id === team._id))
+        );
+        if (myTeam) {
+          setTeamScores({
+            totalScore: myTeam.totalScore ?? 0,
+            round1Score: myTeam.round1Score ?? 0,
+            round2Score: myTeam.round2Score ?? 0,
+            round3Score: myTeam.round3Score ?? 0
+          });
+        }
       }
     } catch {
       // ignore
@@ -128,7 +168,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (team) {
       checkMySubmissionStatus();
     }
-  }, [team, currentQuestion?._id]);
+  }, [team, currentQuestion?._id, gameState?.questionStatus]);
 
   return (
     <GameContext.Provider
@@ -138,6 +178,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         remainingSeconds,
         isSubmitted,
         submissionResponse,
+        teamScores,
         revealedQuestion,
         evaluatedResults,
         isFetchingState,
