@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Eye, Maximize2, CheckCircle2, Lock, AlertCircle, ArrowLeft, ArrowRight, ArrowLeftRight } from 'lucide-react';
+import { Eye, Maximize2, CheckCircle2, Lock, AlertCircle, ArrowLeft, ArrowRight, ArrowLeftRight, MoveHorizontal } from 'lucide-react';
 import { Question, Round2Defect } from '../../types';
 import { api, getFullImageUrl } from '../../services/api';
 import { useGame } from '../../context/GameContext';
@@ -11,26 +11,21 @@ interface Round2DefectMatchProps {
 }
 
 interface ImageSlotItem {
-  id: string; // original defect id ('1', '2', '3', '4')
+  id: string; // 'A', 'B', 'C', 'D'
   imageUrl: string;
   originalTerm?: string;
 }
 
 export const Round2DefectMatch: React.FC<Round2DefectMatchProps> = ({ question, isSubmitted, onSubmitted }) => {
   const { remainingSeconds, gameState, submissionResponse } = useGame();
-  const [selectedMatches, setSelectedMatches] = useState<Record<string, string>>({});
   const [zoomedImageUrl, setZoomedImageUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
   // Target slots in fixed order (Zone 1, Zone 2, Zone 3, Zone 4)
   const defects: Round2Defect[] = question.round2Defects || [];
-  const termOptions = question.round2TermOptions || [];
 
-  // Check if this question uses the 4-image arrangement mode
-  const hasMultipleImages = defects.some(d => Boolean(d.imageUrl));
-
-  // The 4 image items currently slotted into slots [0..3]
+  // The 4 image items currently slotted into target zones [0..3]
   const [slottedImages, setSlottedImages] = useState<ImageSlotItem[]>([]);
   // Click-to-swap selection state
   const [selectedSlotIndex, setSelectedSlotIndex] = useState<number | null>(null);
@@ -38,37 +33,55 @@ export const Round2DefectMatch: React.FC<Round2DefectMatchProps> = ({ question, 
   // Initialize images matching consistent round2InitialOrder when question loads
   useEffect(() => {
     if (defects.length > 0) {
-      // Build lookup of available images
+      const letters = ['A', 'B', 'C', 'D'];
       const imageDict: Record<string, ImageSlotItem> = {};
 
+      // 1. Map from round2Images if present
       if (question.round2Images && question.round2Images.length > 0) {
         question.round2Images.forEach(img => {
-          imageDict[img.id] = { id: img.id, imageUrl: img.imageUrl };
-        });
-      } else {
-        defects.forEach(d => {
-          imageDict[d.id] = {
-            id: d.id,
-            imageUrl: d.imageUrl || question.round2ImageUrl || '',
-            originalTerm: d.correctTerm
-          };
+          if (img.imageUrl) {
+            imageDict[img.id] = { id: img.id, imageUrl: img.imageUrl };
+          }
         });
       }
 
-      // If round2InitialOrder is defined (consistent across admin live control and users):
-      if (question.round2InitialOrder && question.round2InitialOrder.length === defects.length) {
-        const ordered = question.round2InitialOrder.map(imgId => {
-          return imageDict[imgId] || { id: imgId, imageUrl: '' };
-        });
-        setSlottedImages(ordered);
-      } else {
-        // Fallback: randomized shuffle
-        const items = Object.values(imageDict);
-        const shuffled = [...items].sort(() => Math.random() - 0.5);
-        setSlottedImages(shuffled);
+      // 2. Map defects and letters as fallbacks
+      defects.forEach((d, idx) => {
+        const letter = letters[idx] || String(idx + 1);
+        const imgUrl =
+          imageDict[letter]?.imageUrl ||
+          d.imageUrl ||
+          question.round2ImageUrl ||
+          '';
+
+        if (!imageDict[letter]) {
+          imageDict[letter] = { id: letter, imageUrl: imgUrl, originalTerm: d.correctTerm };
+        }
+        if (!imageDict[d.id]) {
+          imageDict[d.id] = { id: letter, imageUrl: imgUrl, originalTerm: d.correctTerm };
+        }
+      });
+
+      // 3. Resolve initial order matching the admin live control scrambled presentation
+      let initialOrder = question.round2InitialOrder;
+      if (!initialOrder || initialOrder.length !== defects.length) {
+        initialOrder = letters.slice(0, defects.length);
       }
+
+      const ordered = initialOrder.map((imgId, idx) => {
+        const fallbackLetter = letters[idx] || 'A';
+        const item =
+          imageDict[imgId] ||
+          imageDict[fallbackLetter] || {
+            id: imgId,
+            imageUrl: defects[idx]?.imageUrl || question.round2ImageUrl || ''
+          };
+        return item;
+      });
+
+      setSlottedImages(ordered);
     }
-  }, [question._id]);
+  }, [question._id, question.round2InitialOrder, question.round2Images, question.round2Defects]);
 
   // Swap function between two slot positions
   const swapSlots = (idxA: number, idxB: number) => {
@@ -128,15 +141,6 @@ export const Round2DefectMatch: React.FC<Round2DefectMatchProps> = ({ question, 
     }
   };
 
-  // Legacy fallback for single-image dropdown matching
-  const handleSelectTerm = (defectId: string, term: string) => {
-    if (isSubmitted) return;
-    setSelectedMatches(prev => ({
-      ...prev,
-      [defectId]: term
-    }));
-  };
-
   const handleSubmit = async () => {
     if (isSubmitted || isSubmitting) return;
     setErrorMsg('');
@@ -146,19 +150,15 @@ export const Round2DefectMatch: React.FC<Round2DefectMatchProps> = ({ question, 
     onSubmitted();
 
     try {
-      if (hasMultipleImages) {
-        // Build submission payload: mapping each target defect zone to the placed image ID
-        const mappingPayload: Record<string, string> = {};
-        defects.forEach((defect, idx) => {
-          const placedImage = slottedImages[idx];
-          if (placedImage) {
-            mappingPayload[defect.id] = placedImage.id;
-          }
-        });
-        await api.submitAnswer(question._id, mappingPayload);
-      } else {
-        await api.submitAnswer(question._id, selectedMatches);
-      }
+      // Build submission payload: mapping each target defect zone to the placed image ID
+      const mappingPayload: Record<string, string> = {};
+      defects.forEach((defect, idx) => {
+        const placedImage = slottedImages[idx];
+        if (placedImage) {
+          mappingPayload[defect.id] = placedImage.id;
+        }
+      });
+      await api.submitAnswer(question._id, mappingPayload);
     } catch (err: any) {
       console.error('Submission error:', err);
     }
@@ -210,183 +210,134 @@ export const Round2DefectMatch: React.FC<Round2DefectMatchProps> = ({ question, 
         </div>
       )}
 
-      {/* 4-IMAGE ARRANGE MODE */}
-      {hasMultipleImages ? (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between flex-wrap gap-2 px-1">
-            <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5 uppercase tracking-wider">
-              <ArrowLeftRight className="w-4 h-4 text-cyan-400" />
-              Arrange the 4 Images into their Correct Target Slots:
-            </span>
-            <span className="text-[11px] text-cyan-400 font-medium">
-              💡 Drag &amp; drop or click two cards to swap positions
-            </span>
-          </div>
+      {/* 4-Zone Drag & Drop Image Arrangement (Matches Live Control Room Layout) */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-2 px-1">
+          <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5 uppercase tracking-wider">
+            <ArrowLeftRight className="w-4 h-4 text-cyan-400" />
+            Live Participant View: Arrange the 4 Images into their Correct Named Zones:
+          </span>
+          <span className="text-[11px] text-cyan-400 font-semibold bg-cyan-950/40 border border-cyan-500/30 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+            <MoveHorizontal className="w-3.5 h-3.5" />
+            Drag &amp; drop or tap cards to swap
+          </span>
+        </div>
 
-          {/* 4 Slots Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {defects.map((defect, slotIndex) => {
-              const currentImage = slottedImages[slotIndex];
-              const isSelectedForSwap = selectedSlotIndex === slotIndex;
+        {/* 4 Slots Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {defects.map((defect, slotIndex) => {
+            const currentImage = slottedImages[slotIndex];
+            const isSelectedForSwap = selectedSlotIndex === slotIndex;
 
-              return (
+            return (
+              <div
+                key={defect.id}
+                onDragOver={handleDragOver}
+                onDrop={e => handleDrop(e, slotIndex)}
+                className={`rounded-2xl border transition-all p-3.5 space-y-3 bg-slate-900/90 flex flex-col justify-between shadow-lg ${
+                  isSelectedForSwap
+                    ? 'border-cyan-400 ring-2 ring-cyan-400/50 shadow-cyan-500/20 bg-slate-900'
+                    : 'border-slate-800 hover:border-slate-700'
+                }`}
+              >
+                {/* Slot Target Header (Zone Label on left, Target Term on right) */}
+                <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                  <span className="text-[11px] uppercase font-bold text-cyan-400 tracking-wider">
+                    {defect.label || `Zone #${slotIndex + 1}`}
+                  </span>
+                  <span className="text-xs font-black text-white px-2.5 py-0.5 rounded-md bg-indigo-500/25 border border-indigo-500/40 shadow-sm truncate max-w-[120px]">
+                    {defect.correctTerm || 'Target'}
+                  </span>
+                </div>
+
+                {/* Slotted Image Card (Draggable and Clickable) */}
                 <div
-                  key={defect.id}
-                  onDragOver={handleDragOver}
-                  onDrop={e => handleDrop(e, slotIndex)}
-                  className={`rounded-2xl border transition-all p-3.5 space-y-3 bg-slate-900/90 flex flex-col justify-between ${
+                  draggable={!isLocked}
+                  onDragStart={e => handleDragStart(e, slotIndex)}
+                  onClick={() => handleSlotClick(slotIndex)}
+                  className={`relative rounded-xl overflow-hidden bg-black/60 border cursor-grab active:cursor-grabbing p-1.5 group transition-all ${
                     isSelectedForSwap
-                      ? 'border-cyan-400 ring-2 ring-cyan-400/50 shadow-lg shadow-cyan-500/20'
-                      : 'border-slate-800 hover:border-slate-700'
+                      ? 'border-cyan-400 bg-cyan-950/30'
+                      : 'border-slate-700 hover:border-cyan-500/50'
                   }`}
+                  title="Drag or click to select and swap"
                 >
-                  {/* Slot Target Header */}
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                    <span className="text-[10px] uppercase font-bold text-slate-400 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
-                      {defect.label || `Slot #${slotIndex + 1}`}
-                    </span>
-                    <span className="text-xs font-black text-white px-2.5 py-0.5 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                      {defect.correctTerm || 'Target'}
-                    </span>
-                  </div>
-
-                  {/* Slotted Image Card (Draggable) */}
-                  <div
-                    draggable={!isLocked}
-                    onDragStart={e => handleDragStart(e, slotIndex)}
-                    onClick={() => handleSlotClick(slotIndex)}
-                    className={`relative rounded-xl overflow-hidden bg-black/60 border cursor-grab active:cursor-grabbing p-1 group transition-all ${
-                      isSelectedForSwap
-                        ? 'border-cyan-400 bg-cyan-950/20'
-                        : 'border-slate-700 hover:border-slate-600'
-                    }`}
-                    title="Drag or click to select and swap"
-                  >
-                    {currentImage?.imageUrl ? (
-                      <div className="h-44 sm:h-48 flex items-center justify-center overflow-hidden rounded-lg bg-slate-950">
-                        <img
-                          src={getFullImageUrl(currentImage.imageUrl)}
-                          alt={`Slot ${slotIndex + 1} Image`}
-                          className="w-full h-full object-contain pointer-events-none"
-                        />
+                  {currentImage?.imageUrl ? (
+                    <div className="h-44 sm:h-48 flex items-center justify-center overflow-hidden rounded-lg bg-slate-950 relative">
+                      <img
+                        src={getFullImageUrl(currentImage.imageUrl)}
+                        alt={`Slot ${slotIndex + 1} Image`}
+                        className="w-full h-full object-contain pointer-events-none group-hover:scale-105 transition-transform duration-200"
+                      />
+                      <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <Maximize2 className="w-5 h-5 text-cyan-300" />
                       </div>
-                    ) : (
-                      <div className="h-44 flex items-center justify-center text-xs text-slate-500">
-                        No image assigned
-                      </div>
-                    )}
+                    </div>
+                  ) : (
+                    <div className="h-44 sm:h-48 flex items-center justify-center text-xs text-slate-500 bg-slate-950 rounded-lg">
+                      No image assigned
+                    </div>
+                  )}
 
-                    {/* Zoom button on image */}
-                    {currentImage?.imageUrl && (
-                      <button
-                        type="button"
-                        onClick={e => {
-                          e.stopPropagation();
-                          setZoomedImageUrl(currentImage.imageUrl);
-                        }}
-                        className="absolute top-2 right-2 p-1.5 rounded-lg bg-slate-900/80 backdrop-blur text-slate-200 border border-slate-700 hover:bg-slate-800"
-                        title="Zoom Image"
-                      >
-                        <Maximize2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
+                  {/* Zoom button on image */}
+                  {currentImage?.imageUrl && (
+                    <button
+                      type="button"
+                      onClick={e => {
+                        e.stopPropagation();
+                        setZoomedImageUrl(currentImage.imageUrl);
+                      }}
+                      className="absolute top-2.5 right-2.5 p-1.5 rounded-lg bg-slate-900/80 backdrop-blur text-slate-200 border border-slate-700 hover:bg-slate-800 transition-colors shadow"
+                      title="Zoom Image"
+                    >
+                      <Maximize2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
 
-                    {/* Swap badge overlay on hover */}
-                    {!isLocked && (
-                      <div className="mt-1 text-center">
-                        <span className="text-[10px] text-slate-400 group-hover:text-cyan-300 font-semibold transition-colors">
-                          {isSelectedForSwap ? '★ Selected — Click another to swap' : 'Click or Drag to Swap'}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Move Left / Right Controls */}
+                  {/* Swap badge overlay on hover */}
                   {!isLocked && (
-                    <div className="flex items-center gap-2 pt-1">
-                      <button
-                        type="button"
-                        disabled={slotIndex === 0}
-                        onClick={() => moveLeft(slotIndex)}
-                        className="flex-1 py-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:hover:bg-slate-800 text-[11px] font-bold text-slate-300 flex items-center justify-center gap-1 transition-colors"
-                        title="Move left"
-                      >
-                        <ArrowLeft className="w-3 h-3" />
-                        <span>Left</span>
-                      </button>
-                      <button
-                        type="button"
-                        disabled={slotIndex === defects.length - 1}
-                        onClick={() => moveRight(slotIndex)}
-                        className="flex-1 py-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:hover:bg-slate-800 text-[11px] font-bold text-slate-300 flex items-center justify-center gap-1 transition-colors"
-                        title="Move right"
-                      >
-                        <span>Right</span>
-                        <ArrowRight className="w-3 h-3" />
-                      </button>
+                    <div className="mt-1 text-center">
+                      <span className="text-[10px] text-slate-400 group-hover:text-cyan-300 font-semibold transition-colors">
+                        {isSelectedForSwap
+                          ? '★ Selected — Click another to swap'
+                          : currentImage?.id
+                          ? `Image [${currentImage.id}] in Slot #${slotIndex + 1}`
+                          : 'Click or Drag to Swap'}
+                      </span>
                     </div>
                   )}
                 </div>
-              );
-            })}
-          </div>
-        </div>
-      ) : (
-        /* LEGACY SINGLE-IMAGE DROPDOWN MATCHING (Fallback) */
-        <div className="space-y-6">
-          {question.round2ImageUrl && (
-            <div className="relative rounded-2xl overflow-hidden border border-slate-700 bg-slate-900 group">
-              <img
-                src={getFullImageUrl(question.round2ImageUrl)}
-                alt="Defect Inspection"
-                className="w-full h-auto max-h-[380px] object-contain mx-auto cursor-pointer"
-                onClick={() => setZoomedImageUrl(question.round2ImageUrl || null)}
-              />
-              <button
-                type="button"
-                onClick={() => setZoomedImageUrl(question.round2ImageUrl || null)}
-                className="absolute bottom-3 right-3 px-3 py-1.5 rounded-lg bg-slate-900/80 backdrop-blur text-xs font-semibold text-slate-200 border border-slate-700 flex items-center gap-1.5 hover:bg-slate-800"
-              >
-                <Maximize2 className="w-3.5 h-3.5" />
-                <span>Click to Zoom</span>
-              </button>
-            </div>
-          )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {defects.map(defect => {
-              const currentSelection = selectedMatches[defect.id] || '';
-              return (
-                <div key={defect.id} className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-extrabold uppercase px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300">
-                      {defect.label}
-                    </span>
-                    {currentSelection && (
-                      <span className="text-[11px] text-emerald-400 font-semibold flex items-center gap-1">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Selected
-                      </span>
-                    )}
+                {/* Move Left / Right Controls */}
+                {!isLocked && (
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      disabled={slotIndex === 0}
+                      onClick={() => moveLeft(slotIndex)}
+                      className="flex-1 py-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:hover:bg-slate-800 text-[11px] font-bold text-slate-300 flex items-center justify-center gap-1 transition-colors border border-slate-700"
+                      title="Move left"
+                    >
+                      <ArrowLeft className="w-3 h-3" />
+                      <span>Left</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={slotIndex === defects.length - 1}
+                      onClick={() => moveRight(slotIndex)}
+                      className="flex-1 py-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:hover:bg-slate-800 text-[11px] font-bold text-slate-300 flex items-center justify-center gap-1 transition-colors border border-slate-700"
+                      title="Move right"
+                    >
+                      <span>Right</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </button>
                   </div>
-                  <select
-                    value={currentSelection}
-                    onChange={e => handleSelectTerm(defect.id, e.target.value)}
-                    disabled={isLocked}
-                    className="w-full bg-slate-950 text-slate-100 border border-slate-700 rounded-lg p-2.5 text-sm focus:outline-none"
-                  >
-                    <option value="">-- Choose Classification --</option>
-                    {termOptions.map(term => (
-                      <option key={term} value={term}>
-                        {term}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              );
-            })}
-          </div>
+                )}
+              </div>
+            );
+          })}
         </div>
-      )}
+      </div>
 
       {/* Zoom Modal */}
       {zoomedImageUrl && (
@@ -439,14 +390,11 @@ export const Round2DefectMatch: React.FC<Round2DefectMatchProps> = ({ question, 
               <span>Submitting Arrangement...</span>
             ) : (
               <>
-                <Lock className="w-4 h-4" />
-                <span>Submit &amp; Lock Image Arrangement</span>
+                <CheckCircle2 className="w-5 h-5 text-cyan-200" />
+                <span>Submit Image Arrangement</span>
               </>
             )}
           </button>
-          <p className="text-center text-[11px] text-slate-500 mt-2 font-mono">
-            ⚠️ Speed round! Arrange all 4 images into their target slots before timer runs out.
-          </p>
         </div>
       )}
     </div>
