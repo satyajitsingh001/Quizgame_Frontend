@@ -650,10 +650,16 @@ export const QuestionBank: React.FC = () => {
                           </span>
                         </div>
                         {(() => {
+                          const letters = ['A', 'B', 'C', 'D'];
+                          const slotIdx = q.round2Defects?.findIndex(x => x.id === d.id) ?? -1;
+                          const zoneLetter = letters[slotIdx] || 'A';
+
+                          // Strictly resolve this zone's own image (never duplicate Zone #1's image onto Zones #2, #3, #4)
                           const imgUrl =
                             d.imageUrl ||
+                            q.round2Images?.find(i => i.id === zoneLetter)?.imageUrl ||
                             (d.correctImageId && q.round2Images?.find(i => i.id === d.correctImageId)?.imageUrl) ||
-                            q.round2ImageUrl;
+                            (slotIdx === 0 ? q.round2ImageUrl : '');
 
                           return imgUrl ? (
                             <div className="h-20 rounded-lg overflow-hidden border border-slate-800 bg-black/40 flex items-center justify-center">
@@ -664,7 +670,7 @@ export const QuestionBank: React.FC = () => {
                               />
                             </div>
                           ) : (
-                            <div className="h-16 rounded-lg bg-slate-900 text-slate-500 text-[10px] flex items-center justify-center">
+                            <div className="h-20 rounded-lg bg-slate-900 border border-slate-800/60 text-slate-500 text-[10px] flex items-center justify-center">
                               No image
                             </div>
                           );
