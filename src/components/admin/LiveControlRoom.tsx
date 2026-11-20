@@ -594,9 +594,6 @@ export const LiveControlRoom: React.FC = () => {
                       </div>
                     ))}
                   </div>
-                  <div className="text-[11px] text-emerald-400 font-bold mt-1">
-                    Official Key: {currentQuestionData.round1CorrectOrder?.join(' ➔ ')}
-                  </div>
                 </div>
               )}
 
