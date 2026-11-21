@@ -639,8 +639,8 @@ export const LiveControlRoom: React.FC = () => {
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
                         {currentQuestionData.round2Defects.map(d => {
                           const correctImgUrl =
-                            d.imageUrl ||
                             (d.correctImageId && currentQuestionData.round2Images?.find(i => i.id === d.correctImageId)?.imageUrl) ||
+                            d.imageUrl ||
                             null;
 
                           return (
@@ -660,6 +660,9 @@ export const LiveControlRoom: React.FC = () => {
                                   />
                                 </div>
                               )}
+                              <div className="text-center text-[10px] text-emerald-400 font-bold bg-emerald-500/10 py-0.5 rounded border border-emerald-500/20">
+                                Correct: Image [{d.correctImageId || 'A'}]
+                              </div>
                             </div>
                           );
                         })}
