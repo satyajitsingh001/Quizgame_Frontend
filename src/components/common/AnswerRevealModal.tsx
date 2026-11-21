@@ -38,6 +38,7 @@ export const AnswerRevealModal: React.FC<AnswerRevealModalProps> = ({
   onNextQuestion
 }) => {
   const [isImageZoomed, setIsImageZoomed] = useState(false);
+  const [zoomedImgSrc, setZoomedImgSrc] = useState<string | null>(null);
 
   // Score calculations for participants
   const scoreResult = submissionResponse?.scoreResult;
@@ -241,27 +242,73 @@ export const AnswerRevealModal: React.FC<AnswerRevealModalProps> = ({
               </p>
             )}
 
-            {/* Round 2 Defect Image */}
-            {question.round === 2 && question.round2ImageUrl && (
-              <div className="mt-4 pt-3 border-t border-slate-800">
-                <span className="text-xs font-semibold text-slate-400 block mb-2">
-                  Inspection Image:
-                </span>
-                <div className="relative rounded-2xl overflow-hidden border border-slate-700 bg-slate-950 group">
-                  <img
-                    src={getFullImageUrl(question.round2ImageUrl)}
-                    alt="Inspection Defect"
-                    className="w-full h-auto max-h-56 object-contain mx-auto cursor-pointer transition-transform group-hover:scale-[1.01]"
-                    onClick={() => setIsImageZoomed(true)}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setIsImageZoomed(true)}
-                    className="absolute bottom-2.5 right-2.5 px-3 py-1 rounded-lg bg-slate-900/80 backdrop-blur text-xs font-semibold text-slate-200 border border-slate-700 flex items-center gap-1.5 hover:bg-slate-800"
-                  >
-                    <Maximize2 className="w-3.5 h-3.5" />
-                    <span>Zoom Image</span>
-                  </button>
+            {/* Round 2 Target Zones & 4 Configured Images */}
+            {question.round === 2 && (
+              <div className="mt-4 pt-3 border-t border-slate-800 space-y-2.5">
+                <div className="flex items-center justify-between text-xs text-slate-400">
+                  <span className="font-semibold text-cyan-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <Eye className="w-3.5 h-3.5" />
+                    Round 2 Target Zones &amp; Configured Images:
+                  </span>
+                  <span className="text-[10px] text-slate-500">Click any image to enlarge</span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  {(question.round2Defects && question.round2Defects.length > 0
+                    ? question.round2Defects
+                    : [{ id: '1', label: 'Zone #1', correctTerm: '' }, { id: '2', label: 'Zone #2', correctTerm: '' }, { id: '3', label: 'Zone #3', correctTerm: '' }, { id: '4', label: 'Zone #4', correctTerm: '' }]
+                  ).map((d: any, idx: number) => {
+                    const letters = ['A', 'B', 'C', 'D'];
+                    const zoneLetter = letters[idx] || String(idx + 1);
+                    const label = d.label || `Zone #${idx + 1}`;
+                    const term = d.correctTerm || '';
+                    const defaultDefectSvgs = ['/defect-casting.svg', '/defect-machining.svg', '/defect-paint.svg', '/defect-welding.svg'];
+                    
+                    const imgUrl =
+                      d.imageUrl ||
+                      question.round2Images?.find(i => i.id === zoneLetter)?.imageUrl ||
+                      (idx === 0 ? question.round2ImageUrl : '') ||
+                      defaultDefectSvgs[idx % defaultDefectSvgs.length];
+
+                    return (
+                      <div
+                        key={d.id || idx}
+                        className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5 hover:border-cyan-500/40 transition-colors"
+                      >
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="text-cyan-400 font-bold uppercase">{label}</span>
+                          {term && (
+                            <span className="font-semibold text-white bg-slate-800 px-1.5 py-0.5 rounded truncate max-w-[85px]" title={term}>
+                              {term}
+                            </span>
+                          )}
+                        </div>
+
+                        <div
+                          onClick={() => {
+                            if (imgUrl) {
+                              setZoomedImgSrc(imgUrl);
+                              setIsImageZoomed(true);
+                            }
+                          }}
+                          className="h-24 rounded-lg overflow-hidden border border-slate-800 bg-black/50 flex items-center justify-center cursor-pointer group relative"
+                        >
+                          <img
+                            src={getFullImageUrl(imgUrl)}
+                            alt={label}
+                            className="w-full h-full object-contain group-hover:scale-105 transition-transform"
+                          />
+                          <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <Maximize2 className="w-3.5 h-3.5 text-cyan-300" />
+                          </div>
+                        </div>
+
+                        <div className="text-center text-[10px] text-slate-400 font-medium">
+                          Image [{zoneLetter}]
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -523,20 +570,29 @@ export const AnswerRevealModal: React.FC<AnswerRevealModalProps> = ({
       </div>
 
       {/* Inspection Image Full Zoom Modal */}
-      {isImageZoomed && question.round2ImageUrl && (
+      {isImageZoomed && (zoomedImgSrc || question.round2ImageUrl) && (
         <div
           className="fixed inset-0 z-60 bg-black/95 backdrop-blur-md flex items-center justify-center p-4 animate-overlay-fade"
-          onClick={() => setIsImageZoomed(false)}
+          onClick={() => {
+            setIsImageZoomed(false);
+            setZoomedImgSrc(null);
+          }}
         >
-          <div className="relative max-w-5xl max-h-[92vh] overflow-auto rounded-2xl border border-slate-700 p-2 bg-slate-950">
+          <div
+            className="relative max-w-5xl max-h-[92vh] overflow-auto rounded-2xl border border-slate-700 p-2 bg-slate-950"
+            onClick={(e) => e.stopPropagation()}
+          >
             <img
-              src={getFullImageUrl(question.round2ImageUrl)}
+              src={getFullImageUrl(zoomedImgSrc || question.round2ImageUrl || '')}
               alt="Inspection Zoomed"
               className="w-full h-auto max-h-[85vh] object-contain mx-auto"
             />
             <button
               type="button"
-              onClick={() => setIsImageZoomed(false)}
+              onClick={() => {
+                setIsImageZoomed(false);
+                setZoomedImgSrc(null);
+              }}
               className="absolute top-4 right-4 p-2.5 rounded-xl bg-slate-900/90 text-white hover:bg-slate-800 border border-slate-700"
             >
               <X className="w-5 h-5" />
