@@ -292,6 +292,22 @@ export const QuestionBank: React.FC = () => {
     );
   };
 
+  const populateR2SampleDefects = () => {
+    setR2Zone1Term('Casting Porosity');
+    setR2Zone2Term('Machining Burr');
+    setR2Zone3Term('Paint Blister');
+    setR2Zone4Term('Weld Crack');
+    setR2Zone1Image('/defect-casting.svg');
+    setR2Zone2Image('/defect-machining.svg');
+    setR2Zone3Image('/defect-paint.svg');
+    setR2Zone4Image('/defect-welding.svg');
+    setR2Zone1Match('A');
+    setR2Zone2Match('B');
+    setR2Zone3Match('C');
+    setR2Zone4Match('D');
+    setFeedback('Sample defects & images loaded! Click Create Question to save.');
+  };
+
   const handleSaveQuestion = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
@@ -333,10 +349,17 @@ export const QuestionBank: React.FC = () => {
 
     // Round 2 Validation & Payload
     if (formRound === 2) {
-      if (!r2Zone1Term.trim() || !r2Zone2Term.trim() || !r2Zone3Term.trim() || !r2Zone4Term.trim()) {
-        setErrorMessage('Please enter defect terms for all 4 zones (#1, #2, #3, #4).');
-        return;
-      }
+      const z1Term = r2Zone1Term.trim() || 'Defect #1';
+      const z2Term = r2Zone2Term.trim() || 'Defect #2';
+      const z3Term = r2Zone3Term.trim() || 'Defect #3';
+      const z4Term = r2Zone4Term.trim() || 'Defect #4';
+
+      const defaultImgs = [
+        '/defect-casting.svg',
+        '/defect-machining.svg',
+        '/defect-paint.svg',
+        '/defect-welding.svg'
+      ];
 
       // Collect term options (the 4 correct terms + any extras entered)
       const extraList = r2ExtraTerms
@@ -346,10 +369,10 @@ export const QuestionBank: React.FC = () => {
 
       const allTerms = Array.from(
         new Set([
-          r2Zone1Term.trim(),
-          r2Zone2Term.trim(),
-          r2Zone3Term.trim(),
-          r2Zone4Term.trim(),
+          z1Term,
+          z2Term,
+          z3Term,
+          z4Term,
           ...extraList
         ])
       );
@@ -357,32 +380,32 @@ export const QuestionBank: React.FC = () => {
       // Retrieve the existing question record being edited (if any)
       const existingQ = editingId ? questions.find(q => q._id === editingId) : null;
 
-      // Each zone's image is strictly independent (NEVER fall back to another zone's image)
+      // Each zone's image is strictly independent, defaulting to crisp sample defect SVGs if unassigned
       const finalImgA =
         r2Zone1Image.trim() ||
         existingQ?.round2Images?.find(i => i.id === 'A')?.imageUrl ||
         existingQ?.round2Defects?.find(d => d.id === '1')?.imageUrl ||
-        '';
+        defaultImgs[0];
 
       const finalImgB =
         r2Zone2Image.trim() ||
         existingQ?.round2Images?.find(i => i.id === 'B')?.imageUrl ||
         existingQ?.round2Defects?.find(d => d.id === '2')?.imageUrl ||
-        '';
+        defaultImgs[1];
 
       const finalImgC =
         r2Zone3Image.trim() ||
         existingQ?.round2Images?.find(i => i.id === 'C')?.imageUrl ||
         existingQ?.round2Defects?.find(d => d.id === '3')?.imageUrl ||
-        '';
+        defaultImgs[2];
 
       const finalImgD =
         r2Zone4Image.trim() ||
         existingQ?.round2Images?.find(i => i.id === 'D')?.imageUrl ||
         existingQ?.round2Defects?.find(d => d.id === '4')?.imageUrl ||
-        '';
+        defaultImgs[3];
 
-      payload.round2ImageUrl = finalImgA || '';
+      payload.round2ImageUrl = finalImgA || defaultImgs[0];
 
       payload.round2Images = [
         { id: 'A', imageUrl: finalImgA },
@@ -395,29 +418,29 @@ export const QuestionBank: React.FC = () => {
         {
           id: '1',
           label: 'Zone #1',
-          correctTerm: r2Zone1Term.trim(),
-          correctImageId: r2Zone1Match,
+          correctTerm: z1Term,
+          correctImageId: r2Zone1Match || 'A',
           imageUrl: finalImgA
         },
         {
           id: '2',
           label: 'Zone #2',
-          correctTerm: r2Zone2Term.trim(),
-          correctImageId: r2Zone2Match,
+          correctTerm: z2Term,
+          correctImageId: r2Zone2Match || 'B',
           imageUrl: finalImgB
         },
         {
           id: '3',
           label: 'Zone #3',
-          correctTerm: r2Zone3Term.trim(),
-          correctImageId: r2Zone3Match,
+          correctTerm: z3Term,
+          correctImageId: r2Zone3Match || 'C',
           imageUrl: finalImgC
         },
         {
           id: '4',
           label: 'Zone #4',
-          correctTerm: r2Zone4Term.trim(),
-          correctImageId: r2Zone4Match,
+          correctTerm: z4Term,
+          correctImageId: r2Zone4Match || 'D',
           imageUrl: finalImgD
         }
       ];
@@ -860,21 +883,30 @@ export const QuestionBank: React.FC = () => {
               {/* ROUND 2 SPECIFIC INPUTS: 4 Zones & 4 Images */}
               {formRound === 2 && (
                 <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
-                  <div>
-                    <span className="text-xs font-extrabold uppercase text-cyan-400 block">
-                      Round 2: 4 Zones &amp; 4 Images (Image Arrangement Challenge)
-                    </span>
-                    <p className="text-[11px] text-slate-400 mt-1">
-                      Provide 4 target names (e.g. Cat, Car, Ball, Dog) and upload an image for each. Participants will see the images scrambled and must arrange them into the correct order.
-                    </p>
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div>
+                      <span className="text-xs font-extrabold uppercase text-cyan-400 block">
+                        Round 2: 4 Zones &amp; 4 Images (Image Arrangement Challenge)
+                      </span>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        Provide 4 target names and upload an image for each.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={populateR2SampleDefects}
+                      className="px-3 py-1.5 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 border border-cyan-500/30 text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm"
+                    >
+                      <span>⚡ Auto-Fill Sample Defects &amp; SVGs</span>
+                    </button>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     {[
-                      { id: '1', label: 'Zone #1', name: r2Zone1Term, setName: setR2Zone1Term, img: r2Zone1Image, setImg: setR2Zone1Image, placeholder: 'e.g. Cat' },
-                      { id: '2', label: 'Zone #2', name: r2Zone2Term, setName: setR2Zone2Term, img: r2Zone2Image, setImg: setR2Zone2Image, placeholder: 'e.g. Car' },
-                      { id: '3', label: 'Zone #3', name: r2Zone3Term, setName: setR2Zone3Term, img: r2Zone3Image, setImg: setR2Zone3Image, placeholder: 'e.g. Ball' },
-                      { id: '4', label: 'Zone #4', name: r2Zone4Term, setName: setR2Zone4Term, img: r2Zone4Image, setImg: setR2Zone4Image, placeholder: 'e.g. Dog' }
+                      { id: '1', label: 'Zone #1', name: r2Zone1Term, setName: setR2Zone1Term, img: r2Zone1Image, setImg: setR2Zone1Image, placeholder: 'e.g. Casting Porosity' },
+                      { id: '2', label: 'Zone #2', name: r2Zone2Term, setName: setR2Zone2Term, img: r2Zone2Image, setImg: setR2Zone2Image, placeholder: 'e.g. Machining Burr' },
+                      { id: '3', label: 'Zone #3', name: r2Zone3Term, setName: setR2Zone3Term, img: r2Zone3Image, setImg: setR2Zone3Image, placeholder: 'e.g. Paint Blister' },
+                      { id: '4', label: 'Zone #4', name: r2Zone4Term, setName: setR2Zone4Term, img: r2Zone4Image, setImg: setR2Zone4Image, placeholder: 'e.g. Weld Crack' }
                     ].map(zone => (
                       <div key={zone.id} className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5">
                         <div className="flex items-center justify-between">
@@ -892,7 +924,6 @@ export const QuestionBank: React.FC = () => {
                           </label>
                           <input
                             type="text"
-                            required
                             value={zone.name}
                             onChange={e => zone.setName(e.target.value)}
                             placeholder={zone.placeholder}

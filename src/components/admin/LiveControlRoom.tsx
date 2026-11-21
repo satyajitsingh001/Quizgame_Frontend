@@ -529,11 +529,18 @@ export const LiveControlRoom: React.FC = () => {
                     {currentQuestionData.round2Defects?.map((d, slotIdx) => {
                       const letters = ['A', 'B', 'C', 'D'];
                       const zoneLetter = letters[slotIdx] || String(slotIdx + 1);
+                      const defaultDefectSvgs = ['/defect-casting.svg', '/defect-machining.svg', '/defect-paint.svg', '/defect-welding.svg'];
+                      
                       // As configured for this zone:
                       const zoneImgUrl =
                         d.imageUrl ||
                         currentQuestionData.round2Images?.find(i => i.id === zoneLetter)?.imageUrl ||
-                        null;
+                        defaultDefectSvgs[slotIdx % defaultDefectSvgs.length];
+
+                      const termText =
+                        d.correctTerm ||
+                        currentQuestionData.round2TermOptions?.[slotIdx] ||
+                        `Defect #${slotIdx + 1}`;
 
                       return (
                         <div
@@ -549,26 +556,23 @@ export const LiveControlRoom: React.FC = () => {
                           <div className="flex items-center justify-between text-[11px]">
                             <span className="text-cyan-400 font-bold uppercase">{d.label}</span>
                             <span className="font-black text-white bg-indigo-500/20 px-2 py-0.5 rounded border border-indigo-500/30 truncate max-w-[100px]">
-                              {d.correctTerm}
+                              {termText}
                             </span>
                           </div>
 
-                          {zoneImgUrl ? (
-                            <div className="h-28 rounded-lg overflow-hidden border border-slate-800 bg-black/50 flex items-center justify-center relative">
-                              <img
-                                src={getFullImageUrl(zoneImgUrl)}
-                                alt={`${d.label} Image`}
-                                className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-200"
-                              />
-                              <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                <Maximize2 className="w-4 h-4 text-cyan-300" />
-                              </div>
+                          <div className="h-28 rounded-lg overflow-hidden border border-slate-800 bg-black/50 flex items-center justify-center relative">
+                            <img
+                              src={getFullImageUrl(zoneImgUrl)}
+                              onError={e => {
+                                (e.target as HTMLImageElement).src = defaultDefectSvgs[slotIdx % defaultDefectSvgs.length];
+                              }}
+                              alt={`${d.label} Image`}
+                              className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-200"
+                            />
+                            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <Maximize2 className="w-4 h-4 text-cyan-300" />
                             </div>
-                          ) : (
-                            <div className="h-28 rounded-lg bg-slate-950 text-slate-500 text-[10px] flex items-center justify-center">
-                              No image
-                            </div>
-                          )}
+                          </div>
 
                           <div className="flex items-center justify-between text-[10px] font-medium pt-0.5">
                             <span className="text-slate-400">Image [{zoneLetter}]</span>
@@ -829,6 +833,17 @@ export const LiveControlRoom: React.FC = () => {
                       >
                         <Play className="w-4 h-4 fill-white" />
                         <span>Resume Timer</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleStartQuestion}
+                        disabled={isActionLoading}
+                        className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs flex items-center gap-1.5"
+                        title="Restart question timer from start"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>Restart Q{selectedQuestionNum}</span>
                       </button>
 
                       <button

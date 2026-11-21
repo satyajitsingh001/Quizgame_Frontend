@@ -34,31 +34,37 @@ export const Round2DefectMatch: React.FC<Round2DefectMatchProps> = ({ question, 
   useEffect(() => {
     if (defects.length > 0) {
       const letters = ['A', 'B', 'C', 'D'];
+      const defaultDefectSvgs = [
+        '/defect-casting.svg',
+        '/defect-machining.svg',
+        '/defect-paint.svg',
+        '/defect-welding.svg'
+      ];
       const imageDict: Record<string, ImageSlotItem> = {};
 
       // 1. Map from round2Images if present
       if (question.round2Images && question.round2Images.length > 0) {
-        question.round2Images.forEach(img => {
-          if (img.imageUrl) {
-            imageDict[img.id] = { id: img.id, imageUrl: img.imageUrl };
-          }
+        question.round2Images.forEach((img, idx) => {
+          const url = img.imageUrl || defaultDefectSvgs[idx % defaultDefectSvgs.length];
+          imageDict[img.id] = { id: img.id, imageUrl: url };
         });
       }
 
       // 2. Map defects and letters as fallbacks
       defects.forEach((d, idx) => {
         const letter = letters[idx] || String(idx + 1);
+        const term = d.correctTerm || question.round2TermOptions?.[idx] || `Defect #${idx + 1}`;
         const imgUrl =
           imageDict[letter]?.imageUrl ||
           d.imageUrl ||
           question.round2ImageUrl ||
-          '';
+          defaultDefectSvgs[idx % defaultDefectSvgs.length];
 
         if (!imageDict[letter]) {
-          imageDict[letter] = { id: letter, imageUrl: imgUrl, originalTerm: d.correctTerm };
+          imageDict[letter] = { id: letter, imageUrl: imgUrl, originalTerm: term };
         }
         if (!imageDict[d.id]) {
-          imageDict[d.id] = { id: letter, imageUrl: imgUrl, originalTerm: d.correctTerm };
+          imageDict[d.id] = { id: letter, imageUrl: imgUrl, originalTerm: term };
         }
       });
 
@@ -70,18 +76,19 @@ export const Round2DefectMatch: React.FC<Round2DefectMatchProps> = ({ question, 
 
       const ordered = initialOrder.map((imgId, idx) => {
         const fallbackLetter = letters[idx] || 'A';
+        const fallbackImg = defaultDefectSvgs[idx % defaultDefectSvgs.length];
         const item =
           imageDict[imgId] ||
           imageDict[fallbackLetter] || {
             id: imgId,
-            imageUrl: defects[idx]?.imageUrl || question.round2ImageUrl || ''
+            imageUrl: defects[idx]?.imageUrl || question.round2ImageUrl || fallbackImg
           };
         return item;
       });
 
       setSlottedImages(ordered);
     }
-  }, [question._id, question.round2InitialOrder, question.round2Images, question.round2Defects]);
+  }, [question._id, question.round2InitialOrder, question.round2Images, question.round2Defects, question.round2TermOptions]);
 
   // Swap function between two slot positions
   const swapSlots = (idxA: number, idxB: number) => {
@@ -229,6 +236,10 @@ export const Round2DefectMatch: React.FC<Round2DefectMatchProps> = ({ question, 
             const currentImage = slottedImages[slotIndex];
             const isSelectedForSwap = selectedSlotIndex === slotIndex;
 
+            const defaultDefectSvgs = ['/defect-casting.svg', '/defect-machining.svg', '/defect-paint.svg', '/defect-welding.svg'];
+            const targetTerm = defect.correctTerm || question.round2TermOptions?.[slotIndex] || `Defect #${slotIndex + 1}`;
+            const displayImgUrl = currentImage?.imageUrl || defaultDefectSvgs[slotIndex % defaultDefectSvgs.length];
+
             return (
               <div
                 key={defect.id}
@@ -246,7 +257,7 @@ export const Round2DefectMatch: React.FC<Round2DefectMatchProps> = ({ question, 
                     {defect.label || `Zone #${slotIndex + 1}`}
                   </span>
                   <span className="text-xs font-black text-white px-2.5 py-0.5 rounded-md bg-indigo-500/25 border border-indigo-500/40 shadow-sm truncate max-w-[120px]">
-                    {defect.correctTerm || 'Target'}
+                    {targetTerm}
                   </span>
                 </div>
 
@@ -262,22 +273,19 @@ export const Round2DefectMatch: React.FC<Round2DefectMatchProps> = ({ question, 
                   }`}
                   title="Drag or click to select and swap"
                 >
-                  {currentImage?.imageUrl ? (
-                    <div className="h-44 sm:h-48 flex items-center justify-center overflow-hidden rounded-lg bg-slate-950 relative">
-                      <img
-                        src={getFullImageUrl(currentImage.imageUrl)}
-                        alt={`Slot ${slotIndex + 1} Image`}
-                        className="w-full h-full object-contain pointer-events-none group-hover:scale-105 transition-transform duration-200"
-                      />
-                      <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <Maximize2 className="w-5 h-5 text-cyan-300" />
-                      </div>
+                  <div className="h-44 sm:h-48 flex items-center justify-center overflow-hidden rounded-lg bg-slate-950 relative">
+                    <img
+                      src={getFullImageUrl(displayImgUrl) || defaultDefectSvgs[slotIndex % defaultDefectSvgs.length]}
+                      onError={e => {
+                        (e.target as HTMLImageElement).src = defaultDefectSvgs[slotIndex % defaultDefectSvgs.length];
+                      }}
+                      alt={`Slot ${slotIndex + 1} Image`}
+                      className="w-full h-full object-contain pointer-events-none group-hover:scale-105 transition-transform duration-200"
+                    />
+                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <Maximize2 className="w-5 h-5 text-cyan-300" />
                     </div>
-                  ) : (
-                    <div className="h-44 sm:h-48 flex items-center justify-center text-xs text-slate-500 bg-slate-950 rounded-lg">
-                      No image assigned
-                    </div>
-                  )}
+                  </div>
 
                   {/* Zoom button on image */}
                   {currentImage?.imageUrl && (

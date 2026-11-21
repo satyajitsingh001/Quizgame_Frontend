@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="100%" height="100%">
+  <defs>
+    <linearGradient id="weldBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#18181b" />
+      <stop offset="100%" stop-color="#09090b" />
+    </linearGradient>
+  </defs>
+
+  <rect width="800" height="500" rx="12" fill="url(#weldBg)"/>
+  
+  <text x="30" y="45" font-family="sans-serif" font-size="20" font-weight="bold" fill="#fafafa">STRUCTURAL WELD JOINT AUDIT #WJ-77</text>
+  <text x="30" y="70" font-family="sans-serif" font-size="13" fill="#a1a1aa">ASME Section IX Quality Inspection | Visual &amp; Ultrasonic Check</text>
+
+  <!-- Zone 1: Incomplete Penetration -->
+  <g transform="translate(80, 140)">
+    <rect width="280" height="130" rx="8" fill="#27272a" stroke="#ef4444" stroke-width="2" stroke-dasharray="4"/>
+    <rect x="40" y="35" width="80" height="60" fill="#52525b"/>
+    <rect x="160" y="35" width="80" height="60" fill="#52525b"/>
+    <polygon points="120,35 160,35 140,75" fill="#f59e0b"/>
+    <!-- Unmelted root gap at base -->
+    <line x1="120" y1="75" x2="160" y2="75" stroke="#ef4444" stroke-width="4"/>
+    <circle cx="25" cy="25" r="16" fill="#ef4444"/>
+    <text x="25" y="31" font-family="sans-serif" font-size="16" font-weight="bold" fill="#ffffff" text-anchor="middle">1</text>
+    <text x="55" y="30" font-family="sans-serif" font-size="13" font-weight="bold" fill="#fca5a5">ZONE #1</text>
+  </g>
+
+  <!-- Zone 2: Porosity -->
+  <g transform="translate(440, 140)">
+    <rect width="280" height="130" rx="8" fill="#27272a" stroke="#f59e0b" stroke-width="2" stroke-dasharray="4"/>
+    <rect x="40" y="40" width="200" height="50" rx="25" fill="#eab308" opacity="0.8"/>
+    <!-- Cluster of tiny trapped gas pits -->
+    <circle cx="100" cy="65" r="4" fill="#18181b"/>
+    <circle cx="115" cy="55" r="3" fill="#18181b"/>
+    <circle cx="120" cy="70" r="5" fill="#18181b"/>
+    <circle cx="135" cy="60" r="4" fill="#18181b"/>
+    <circle cx="150" cy="68" r="3" fill="#18181b"/>
+    <circle cx="25" cy="25" r="16" fill="#f59e0b"/>
+    <text x="25" y="31" font-family="sans-serif" font-size="16" font-weight="bold" fill="#ffffff" text-anchor="middle">2</text>
+    <text x="55" y="30" font-family="sans-serif" font-size="13" font-weight="bold" fill="#fde68a">ZONE #2</text>
+  </g>
+
+  <!-- Zone 3: Undercut -->
+  <g transform="translate(80, 310)">
+    <rect width="280" height="130" rx="8" fill="#27272a" stroke="#3b82f6" stroke-width="2" stroke-dasharray="4"/>
+    <rect x="40" y="60" width="200" height="40" fill="#52525b"/>
+    <path d="M 80 60 Q 140 20 200 60" fill="#eab308"/>
+    <!-- Gouge/groove melted into parent metal at weld toe -->
+    <path d="M 75 60 C 80 75 85 75 90 60" fill="none" stroke="#38bdf8" stroke-width="4"/>
+    <circle cx="25" cy="25" r="16" fill="#3b82f6"/>
+    <text x="25" y="31" font-family="sans-serif" font-size="16" font-weight="bold" fill="#ffffff" text-anchor="middle">3</text>
+    <text x="55" y="30" font-family="sans-serif" font-size="13" font-weight="bold" fill="#93c5fd">ZONE #3</text>
+  </g>
+
+  <!-- Zone 4: Spatter -->
+  <g transform="translate(440, 310)">
+    <rect width="280" height="130" rx="8" fill="#27272a" stroke="#a855f7" stroke-width="2" stroke-dasharray="4"/>
+    <rect x="40" y="45" width="200" height="40" fill="#52525b"/>
+    <!-- Unintended molten metal globules scattered outside weld bead -->
+    <circle cx="60" cy="30" r="5" fill="#f97316"/>
+    <circle cx="85" cy="20" r="3" fill="#f97316"/>
+    <circle cx="180" cy="32" r="6" fill="#f97316"/>
+    <circle cx="210" cy="22" r="4" fill="#f97316"/>
+    <circle cx="160" cy="100" r="5" fill="#f97316"/>
+    <circle cx="120" cy="105" r="4" fill="#f97316"/>
+    <circle cx="25" cy="25" r="16" fill="#a855f7"/>
+    <text x="25" y="31" font-family="sans-serif" font-size="16" font-weight="bold" fill="#ffffff" text-anchor="middle">4</text>
+    <text x="55" y="30" font-family="sans-serif" font-size="13" font-weight="bold" fill="#d8b4fe">ZONE #4</text>
+  </g>
+</svg>
