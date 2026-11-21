@@ -437,41 +437,34 @@ export const QuestionBank: React.FC = () => {
         { id: 'D', imageUrl: finalImgD }
       ];
 
-      const imgMap: Record<string, string> = {
-        A: finalImgA,
-        B: finalImgB,
-        C: finalImgC,
-        D: finalImgD
-      };
-
       payload.round2Defects = [
         {
           id: '1',
           label: 'Zone #1',
           correctTerm: z1Term,
           correctImageId: r2Zone1Match || 'A',
-          imageUrl: imgMap[r2Zone1Match || 'A'] || finalImgA
+          imageUrl: finalImgA
         },
         {
           id: '2',
           label: 'Zone #2',
           correctTerm: z2Term,
           correctImageId: r2Zone2Match || 'B',
-          imageUrl: imgMap[r2Zone2Match || 'B'] || finalImgB
+          imageUrl: finalImgB
         },
         {
           id: '3',
           label: 'Zone #3',
           correctTerm: z3Term,
           correctImageId: r2Zone3Match || 'C',
-          imageUrl: imgMap[r2Zone3Match || 'C'] || finalImgC
+          imageUrl: finalImgC
         },
         {
           id: '4',
           label: 'Zone #4',
           correctTerm: z4Term,
           correctImageId: r2Zone4Match || 'D',
-          imageUrl: imgMap[r2Zone4Match || 'D'] || finalImgD
+          imageUrl: finalImgD
         }
       ];
 
@@ -708,10 +701,10 @@ export const QuestionBank: React.FC = () => {
                           const zoneLetter = letters[slotIdx] || 'A';
                           const keyLetter = d.correctImageId || zoneLetter;
 
+                          // Show image as originally configured in Add Question for this zone:
                           const imgUrl =
-                            (d.correctImageId && q.round2Images?.find(i => i.id === d.correctImageId)?.imageUrl) ||
-                            d.imageUrl ||
                             q.round2Images?.find(i => i.id === zoneLetter)?.imageUrl ||
+                            d.imageUrl ||
                             (slotIdx === 0 ? q.round2ImageUrl : '');
 
                           return (
@@ -730,7 +723,7 @@ export const QuestionBank: React.FC = () => {
                                 </div>
                               )}
                               <div className="flex items-center justify-between text-[10px] font-medium text-slate-400 pt-1 border-t border-slate-850">
-                                <span>Target #{slotIdx + 1}</span>
+                                <span>Image [{zoneLetter}]</span>
                                 <span className="text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
                                   Key: [{keyLetter}]
                                 </span>

@@ -265,8 +265,8 @@ export const AnswerRevealModal: React.FC<AnswerRevealModalProps> = ({
                     const defaultDefectSvgs = ['/defect-casting.svg', '/defect-machining.svg', '/defect-paint.svg', '/defect-welding.svg'];
                     
                     const imgUrl =
-                      d.imageUrl ||
                       question.round2Images?.find(i => i.id === zoneLetter)?.imageUrl ||
+                      d.imageUrl ||
                       (idx === 0 ? question.round2ImageUrl : '') ||
                       defaultDefectSvgs[idx % defaultDefectSvgs.length];
 

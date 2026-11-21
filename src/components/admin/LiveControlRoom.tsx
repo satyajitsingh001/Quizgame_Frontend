@@ -533,8 +533,8 @@ export const LiveControlRoom: React.FC = () => {
                       
                       // As configured for this zone:
                       const zoneImgUrl =
-                        d.imageUrl ||
                         currentQuestionData.round2Images?.find(i => i.id === zoneLetter)?.imageUrl ||
+                        d.imageUrl ||
                         (slotIdx === 0 ? currentQuestionData.round2ImageUrl : '') ||
                         '';
 
