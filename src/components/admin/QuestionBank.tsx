@@ -309,12 +309,11 @@ export const QuestionBank: React.FC = () => {
       else if (zoneId === '2') setR2Zone2Image(base64);
       else if (zoneId === '3') setR2Zone3Image(base64);
       else if (zoneId === '4') setR2Zone4Image(base64);
-      setFeedback(`Zone #${zoneId} image saved directly in question data!`);
+      setFeedback(`Zone #${zoneId} image ready!`);
     } catch (err: any) {
       setErrorMessage(`Failed to process image for Zone #${zoneId}: ${err.message}`);
     } finally {
       setUploadingZoneId(null);
-      e.target.value = '';
     }
   };
 
@@ -409,33 +408,25 @@ export const QuestionBank: React.FC = () => {
         ])
       );
 
-      // Retrieve the existing question record being edited (if any)
+      // Retrieve existing question if editing
       const existingQ = editingId ? questions.find(q => q._id === editingId) : null;
 
-      // Each zone's image is strictly independent, defaulting to crisp sample defect SVGs if unassigned
-      const finalImgA =
-        r2Zone1Image.trim() ||
-        existingQ?.round2Images?.find(i => i.id === 'A')?.imageUrl ||
-        existingQ?.round2Defects?.find(d => d.id === '1')?.imageUrl ||
-        defaultImgs[0];
+      // Verify that all 4 zones have an image selected before saving
+      if (!r2Zone1Image.trim() || !r2Zone2Image.trim() || !r2Zone3Image.trim() || !r2Zone4Image.trim()) {
+        const missing: string[] = [];
+        if (!r2Zone1Image.trim()) missing.push('Zone #1');
+        if (!r2Zone2Image.trim()) missing.push('Zone #2');
+        if (!r2Zone3Image.trim()) missing.push('Zone #3');
+        if (!r2Zone4Image.trim()) missing.push('Zone #4');
+        setErrorMessage(`Please upload an image for all 4 zones before saving. Missing: ${missing.join(', ')}`);
+        return;
+      }
 
-      const finalImgB =
-        r2Zone2Image.trim() ||
-        existingQ?.round2Images?.find(i => i.id === 'B')?.imageUrl ||
-        existingQ?.round2Defects?.find(d => d.id === '2')?.imageUrl ||
-        defaultImgs[1];
-
-      const finalImgC =
-        r2Zone3Image.trim() ||
-        existingQ?.round2Images?.find(i => i.id === 'C')?.imageUrl ||
-        existingQ?.round2Defects?.find(d => d.id === '3')?.imageUrl ||
-        defaultImgs[2];
-
-      const finalImgD =
-        r2Zone4Image.trim() ||
-        existingQ?.round2Images?.find(i => i.id === 'D')?.imageUrl ||
-        existingQ?.round2Defects?.find(d => d.id === '4')?.imageUrl ||
-        defaultImgs[3];
+      // Strictly independent image per zone
+      const finalImgA = r2Zone1Image.trim() || defaultImgs[0];
+      const finalImgB = r2Zone2Image.trim() || defaultImgs[1];
+      const finalImgC = r2Zone3Image.trim() || defaultImgs[2];
+      const finalImgD = r2Zone4Image.trim() || defaultImgs[3];
 
       payload.round2ImageUrl = finalImgA || defaultImgs[0];
 
@@ -709,25 +700,33 @@ export const QuestionBank: React.FC = () => {
                           const slotIdx = q.round2Defects?.findIndex(x => x.id === d.id) ?? -1;
                           const zoneLetter = letters[slotIdx] || 'A';
 
-                          // Strictly resolve this zone's own image (never duplicate Zone #1's image onto Zones #2, #3, #4)
                           const imgUrl =
                             d.imageUrl ||
                             q.round2Images?.find(i => i.id === zoneLetter)?.imageUrl ||
-                            (d.correctImageId && q.round2Images?.find(i => i.id === d.correctImageId)?.imageUrl) ||
                             (slotIdx === 0 ? q.round2ImageUrl : '');
 
-                          return imgUrl ? (
-                            <div className="h-20 rounded-lg overflow-hidden border border-slate-800 bg-black/40 flex items-center justify-center">
-                              <img
-                                src={getFullImageUrl(imgUrl)}
-                                alt={d.label}
-                                className="w-full h-full object-contain"
-                              />
-                            </div>
-                          ) : (
-                            <div className="h-20 rounded-lg bg-slate-900 border border-slate-800/60 text-slate-500 text-[10px] flex items-center justify-center">
-                              No image
-                            </div>
+                          return (
+                            <>
+                              {imgUrl ? (
+                                <div className="h-24 rounded-lg overflow-hidden border border-slate-800 bg-black/40 flex items-center justify-center">
+                                  <img
+                                    src={getFullImageUrl(imgUrl)}
+                                    alt={d.label}
+                                    className="w-full h-full object-contain"
+                                  />
+                                </div>
+                              ) : (
+                                <div className="h-24 rounded-lg bg-slate-900 border border-slate-800/60 text-slate-500 text-[10px] flex items-center justify-center">
+                                  No image
+                                </div>
+                              )}
+                              <div className="flex items-center justify-between text-[10px] font-medium text-slate-400 pt-1 border-t border-slate-850">
+                                <span>Image [{zoneLetter}]</span>
+                                <span className="text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                                  Key: [{d.correctImageId || zoneLetter}]
+                                </span>
+                              </div>
+                            </>
                           );
                         })()}
                       </div>
@@ -967,28 +966,39 @@ export const QuestionBank: React.FC = () => {
                           <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">
                             Image for {zone.label}:
                           </label>
+                          <input
+                            id={`r2-zone-file-input-${zone.id}`}
+                            type="file"
+                            accept="image/*"
+                            onChange={e => handleZoneImageUpload(zone.id, e)}
+                            style={{ display: 'none' }}
+                          />
                           <div className="flex items-center gap-2">
-                            <label className="cursor-pointer px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-[11px] font-bold inline-flex items-center gap-1.5 shadow-sm transition-colors">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const el = document.getElementById(`r2-zone-file-input-${zone.id}`) as HTMLInputElement | null;
+                                if (el) {
+                                  el.value = '';
+                                  el.click();
+                                }
+                              }}
+                              className="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-[11px] font-bold inline-flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+                            >
                               <ImageIcon className="w-3.5 h-3.5" />
                               <span>{zone.img ? 'Change Image' : 'Select Image File'}</span>
-                              <input
-                                type="file"
-                                accept="image/*"
-                                onChange={e => handleZoneImageUpload(zone.id, e)}
-                                className="hidden"
-                              />
-                            </label>
+                            </button>
                             {zone.img && (
                               <button
                                 type="button"
                                 onClick={() => zone.setImg('')}
-                                className="px-2.5 py-1.5 rounded-lg bg-red-600/20 hover:bg-red-600/40 text-red-300 border border-red-500/30 text-[11px] font-bold transition-colors"
+                                className="px-2.5 py-1.5 rounded-lg bg-red-600/20 hover:bg-red-600/40 text-red-300 border border-red-500/30 text-[11px] font-bold transition-colors cursor-pointer"
                               >
                                 Remove
                               </button>
                             )}
                             {uploadingZoneId === zone.id && (
-                              <span className="text-[11px] text-amber-400 animate-pulse font-medium">Processing...</span>
+                              <span className="text-[11px] text-amber-400 animate-pulse font-medium">Processing image...</span>
                             )}
                           </div>
                           {!zone.img?.startsWith('data:') && (
@@ -1003,13 +1013,13 @@ export const QuestionBank: React.FC = () => {
                         </div>
 
                         {zone.img ? (
-                          <div className="mt-2 h-24 rounded-lg overflow-hidden border border-slate-700 bg-black/40 flex items-center justify-center relative group">
+                          <div className="mt-2 h-24 rounded-lg overflow-hidden border border-emerald-500/40 bg-black/40 flex items-center justify-center relative group">
                             <img
                               src={getFullImageUrl(zone.img)}
                               alt={`${zone.label} preview`}
                               className="w-full h-full object-contain"
                             />
-                            <div className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/70 text-[9px] text-emerald-400 font-mono border border-emerald-500/30">
+                            <div className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/80 text-[9px] text-emerald-400 font-mono border border-emerald-500/30">
                               {zone.img.startsWith('data:') ? 'Base64 (DB)' : 'URL'}
                             </div>
                           </div>
