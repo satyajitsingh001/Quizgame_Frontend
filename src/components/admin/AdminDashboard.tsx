@@ -13,7 +13,6 @@ import {
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useGame } from '../../context/GameContext';
-import { ScoreAdjuster } from './ScoreAdjuster';
 
 export const AdminDashboard: React.FC = () => {
   const { gameState } = useGame();
@@ -21,7 +20,6 @@ export const AdminDashboard: React.FC = () => {
   const [participantsCount, setParticipantsCount] = useState(0);
   const [isRegOpen, setIsRegOpen] = useState(true);
   const [topTeams, setTopTeams] = useState<any[]>([]);
-  const [isAdjusterOpen, setIsAdjusterOpen] = useState(false);
 
   const loadMetrics = async () => {
     try {
@@ -257,26 +255,8 @@ export const AdminDashboard: React.FC = () => {
               ))
             )}
           </div>
-
-          <div className="pt-3 border-t border-slate-800/80">
-            <button
-              type="button"
-              onClick={() => setIsAdjusterOpen(true)}
-              className="w-full py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-400 border border-amber-500/30 text-xs font-bold flex items-center justify-center gap-2 transition-colors"
-            >
-              <Award className="w-4 h-4" />
-              <span>Manual Score Correction</span>
-            </button>
-          </div>
         </div>
       </div>
-
-      {/* Score Adjuster Modal */}
-      <ScoreAdjuster
-        isOpen={isAdjusterOpen}
-        onClose={() => setIsAdjusterOpen(false)}
-        onSuccess={() => loadMetrics()}
-      />
     </div>
   );
 };
