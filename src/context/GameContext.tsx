@@ -96,6 +96,13 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!team) return;
     try {
       const res = await api.getMySubmissionStatus();
+      if (res && (res.teamDeleted || res.message === 'Team not found' || res.message === 'Invalid or expired team session')) {
+        localStorage.removeItem('pp_team_token');
+        localStorage.removeItem('pp_team_data');
+        sessionStorage.setItem('pp_deleted_notice', 'true');
+        window.location.href = '/register?reason=deleted';
+        return;
+      }
       if (res.submitted && res.response) {
         setIsSubmitted(true);
         setSubmissionResponse(res.response);

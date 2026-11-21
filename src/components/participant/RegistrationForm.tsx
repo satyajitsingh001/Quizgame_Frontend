@@ -14,6 +14,12 @@ export const RegistrationForm: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [successData, setSuccessData] = useState<any | null>(null);
   const [isCopied, setIsCopied] = useState(false);
+  const [isDeletedNotice, setIsDeletedNotice] = useState<boolean>(() => {
+    return (
+      window.location.search.includes('reason=deleted') ||
+      sessionStorage.getItem('pp_deleted_notice') === 'true'
+    );
+  });
 
   useEffect(() => {
     const checkStatus = async () => {
@@ -188,6 +194,26 @@ export const RegistrationForm: React.FC = () => {
             Register to participate and get your instant login credentials
           </p>
         </div>
+
+        {isDeletedNotice && (
+          <div className="mb-6 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-start gap-3 text-rose-300 text-xs">
+            <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <span className="font-bold block text-rose-200">Account Removed</span>
+              Your registration was removed by the administrator. Please register again with your details to participate.
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setIsDeletedNotice(false);
+                sessionStorage.removeItem('pp_deleted_notice');
+              }}
+              className="text-rose-400 hover:text-white font-bold px-1"
+            >
+              ✕
+            </button>
+          </div>
+        )}
 
         {!isRegistrationOpen ? (
           <div className="p-6 rounded-2xl bg-red-950/40 border border-red-500/40 text-center space-y-3">

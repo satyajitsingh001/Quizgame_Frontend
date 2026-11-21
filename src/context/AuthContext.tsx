@@ -61,6 +61,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (res && res.team) {
           setTeam(res.team);
           localStorage.setItem('pp_team_data', JSON.stringify(res.team));
+        } else if (
+          res &&
+          (res.teamDeleted ||
+            res.message === 'Team not found' ||
+            res.message === 'Unauthorized: Team session token required' ||
+            res.message === 'Invalid or expired team session')
+        ) {
+          logoutTeam();
+          sessionStorage.setItem('pp_deleted_notice', 'true');
+          window.location.href = '/register?reason=deleted';
         }
       }
     } catch (err) {
@@ -73,6 +83,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     refreshMe();
   }, []);
+
+  // Continuous background verification for active team participants:
+  // If admin deletes the team in Admin panel, automatically log out and navigate to /register
+  useEffect(() => {
+    if (!team) return;
+
+    const interval = setInterval(async () => {
+      const currentToken = localStorage.getItem('pp_team_token');
+      if (!currentToken) return;
+
+      try {
+        const res = await api.getMe('team');
+        if (
+          res &&
+          (res.teamDeleted ||
+            res.message === 'Team not found' ||
+            res.message === 'Unauthorized: Team session token required' ||
+            res.message === 'Invalid or expired team session')
+        ) {
+          logoutTeam();
+          sessionStorage.setItem('pp_deleted_notice', 'true');
+          window.location.href = '/register?reason=deleted';
+        }
+      } catch {
+        // Network blips ignored
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [team?._id]);
 
   const loginAdmin = async (credentials: { username: string; password: string }) => {
     try {
