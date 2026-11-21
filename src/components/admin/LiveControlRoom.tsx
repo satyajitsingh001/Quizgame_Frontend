@@ -535,7 +535,8 @@ export const LiveControlRoom: React.FC = () => {
                       const zoneImgUrl =
                         d.imageUrl ||
                         currentQuestionData.round2Images?.find(i => i.id === zoneLetter)?.imageUrl ||
-                        defaultDefectSvgs[slotIdx % defaultDefectSvgs.length];
+                        (slotIdx === 0 ? currentQuestionData.round2ImageUrl : '') ||
+                        '';
 
                       const termText =
                         d.correctTerm ||
@@ -555,23 +556,33 @@ export const LiveControlRoom: React.FC = () => {
                         >
                           <div className="flex items-center justify-between text-[11px]">
                             <span className="text-cyan-400 font-bold uppercase">{d.label}</span>
-                            <span className="font-black text-white bg-indigo-500/20 px-2 py-0.5 rounded border border-indigo-500/30 truncate max-w-[100px]">
+                            <span className="font-black text-white bg-indigo-500/20 px-2 py-0.5 rounded border border-indigo-500/30 truncate max-w-[100px]" title={termText}>
                               {termText}
                             </span>
                           </div>
 
                           <div className="h-28 rounded-lg overflow-hidden border border-slate-800 bg-black/50 flex items-center justify-center relative">
-                            <img
-                              src={getFullImageUrl(zoneImgUrl)}
-                              onError={e => {
-                                (e.target as HTMLImageElement).src = defaultDefectSvgs[slotIdx % defaultDefectSvgs.length];
-                              }}
-                              alt={`${d.label} Image`}
-                              className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-200"
-                            />
-                            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                              <Maximize2 className="w-4 h-4 text-cyan-300" />
-                            </div>
+                            {zoneImgUrl ? (
+                              <img
+                                src={getFullImageUrl(zoneImgUrl)}
+                                onError={e => {
+                                  if (!zoneImgUrl.startsWith('data:')) {
+                                    (e.target as HTMLImageElement).src = defaultDefectSvgs[slotIdx % defaultDefectSvgs.length];
+                                  }
+                                }}
+                                alt={`${d.label} Image`}
+                                className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-200"
+                              />
+                            ) : (
+                              <div className="text-slate-500 text-[11px] font-semibold">
+                                No image set
+                              </div>
+                            )}
+                            {zoneImgUrl && (
+                              <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                <Maximize2 className="w-4 h-4 text-cyan-300" />
+                              </div>
+                            )}
                           </div>
 
                           <div className="flex items-center justify-between text-[10px] font-medium pt-0.5">

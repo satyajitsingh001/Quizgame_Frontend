@@ -277,7 +277,9 @@ export const Round2DefectMatch: React.FC<Round2DefectMatchProps> = ({ question, 
                     <img
                       src={getFullImageUrl(displayImgUrl) || defaultDefectSvgs[slotIndex % defaultDefectSvgs.length]}
                       onError={e => {
-                        (e.target as HTMLImageElement).src = defaultDefectSvgs[slotIndex % defaultDefectSvgs.length];
+                        if (!displayImgUrl?.startsWith('data:')) {
+                          (e.target as HTMLImageElement).src = defaultDefectSvgs[slotIndex % defaultDefectSvgs.length];
+                        }
                       }}
                       alt={`Slot ${slotIndex + 1} Image`}
                       className="w-full h-full object-contain pointer-events-none group-hover:scale-105 transition-transform duration-200"

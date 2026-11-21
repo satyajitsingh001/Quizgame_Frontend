@@ -12,6 +12,53 @@ import {
 import { api, getFullImageUrl } from '../../services/api';
 import { Question, CompetitionSettings } from '../../types';
 
+/**
+ * Converts any selected image file directly to a compact Base64 JPEG data URL.
+ * Resizes photographic content on an HTML5 canvas to keep document payload small (<100KB per image).
+ */
+const convertFileToBase64 = (file: File, maxDim = 800, quality = 0.82): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Failed to read image file'));
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      if (!result) return reject(new Error('Empty image file'));
+
+      // If SVG, return the data URL directly without canvas rasterization
+      if (file.type === 'image/svg+xml') {
+        return resolve(result);
+      }
+
+      const img = new Image();
+      img.onerror = () => resolve(result); // Fallback to raw base64 if decoding fails
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return resolve(result);
+
+        ctx.drawImage(img, 0, 0, width, height);
+        // Compress photographic content to compact JPEG (~60-90KB)
+        const compressed = canvas.toDataURL('image/jpeg', quality);
+        resolve(compressed);
+      };
+      img.src = result;
+    };
+    reader.readAsDataURL(file);
+  });
+};
+
 export const QuestionBank: React.FC = () => {
   const [activeRound, setActiveRound] = useState<number>(1);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -185,29 +232,26 @@ export const QuestionBank: React.FC = () => {
       setR2Zone3Term(z3?.correctTerm || '');
       setR2Zone4Term(z4?.correctTerm || '');
 
-      // Load each zone's specific image independently so images are never duplicated across zones
+      // Load each zone's specific image independently from defects or round2Images
       const imgA =
-        q.round2Images?.find(i => i.id === 'A')?.imageUrl ||
         z1?.imageUrl ||
-        (q.round2Defects && q.round2Defects[0]?.imageUrl) ||
-        existingMainImg;
+        q.round2Images?.find(i => i.id === 'A')?.imageUrl ||
+        existingMainImg ||
+        '';
 
       const imgB =
-        q.round2Images?.find(i => i.id === 'B')?.imageUrl ||
         z2?.imageUrl ||
-        (q.round2Defects && q.round2Defects[1]?.imageUrl) ||
+        q.round2Images?.find(i => i.id === 'B')?.imageUrl ||
         '';
 
       const imgC =
-        q.round2Images?.find(i => i.id === 'C')?.imageUrl ||
         z3?.imageUrl ||
-        (q.round2Defects && q.round2Defects[2]?.imageUrl) ||
+        q.round2Images?.find(i => i.id === 'C')?.imageUrl ||
         '';
 
       const imgD =
-        q.round2Images?.find(i => i.id === 'D')?.imageUrl ||
         z4?.imageUrl ||
-        (q.round2Defects && q.round2Defects[3]?.imageUrl) ||
+        q.round2Images?.find(i => i.id === 'D')?.imageUrl ||
         '';
 
       setR2Zone1Image(imgA);
@@ -242,21 +286,15 @@ export const QuestionBank: React.FC = () => {
     if (!file) return;
 
     setIsUploading(true);
-    const formData = new FormData();
-    formData.append('image', file);
-
     try {
-      const res = await api.uploadImage(formData);
-      if (res.success && res.imageUrl) {
-        setR2ImageUrl(res.imageUrl);
-        setFeedback('Defect image uploaded successfully!');
-      } else {
-        setErrorMessage('Failed to upload image.');
-      }
+      const base64 = await convertFileToBase64(file);
+      setR2ImageUrl(base64);
+      setFeedback('Defect image saved directly in question data!');
     } catch (err: any) {
       setErrorMessage(`Upload error: ${err.message}`);
     } finally {
       setIsUploading(false);
+      e.target.value = '';
     }
   };
 
@@ -265,24 +303,18 @@ export const QuestionBank: React.FC = () => {
     if (!file) return;
 
     setUploadingZoneId(zoneId);
-    const formData = new FormData();
-    formData.append('image', file);
-
     try {
-      const res = await api.uploadImage(formData);
-      if (res.success && res.imageUrl) {
-        if (zoneId === '1') setR2Zone1Image(res.imageUrl);
-        else if (zoneId === '2') setR2Zone2Image(res.imageUrl);
-        else if (zoneId === '3') setR2Zone3Image(res.imageUrl);
-        else if (zoneId === '4') setR2Zone4Image(res.imageUrl);
-        setFeedback(`Zone #${zoneId} image uploaded successfully!`);
-      } else {
-        setErrorMessage(`Failed to upload image for Zone #${zoneId}.`);
-      }
+      const base64 = await convertFileToBase64(file);
+      if (zoneId === '1') setR2Zone1Image(base64);
+      else if (zoneId === '2') setR2Zone2Image(base64);
+      else if (zoneId === '3') setR2Zone3Image(base64);
+      else if (zoneId === '4') setR2Zone4Image(base64);
+      setFeedback(`Zone #${zoneId} image saved directly in question data!`);
     } catch (err: any) {
-      setErrorMessage(`Upload error: ${err.message}`);
+      setErrorMessage(`Failed to process image for Zone #${zoneId}: ${err.message}`);
     } finally {
       setUploadingZoneId(null);
+      e.target.value = '';
     }
   };
 
@@ -933,35 +965,58 @@ export const QuestionBank: React.FC = () => {
 
                         <div>
                           <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">
-                            Upload Image for {zone.label}:
+                            Image for {zone.label}:
                           </label>
                           <div className="flex items-center gap-2">
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={e => handleZoneImageUpload(zone.id, e)}
-                              className="text-xs text-slate-400 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-cyan-600 file:text-white"
-                            />
+                            <label className="cursor-pointer px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-[11px] font-bold inline-flex items-center gap-1.5 shadow-sm transition-colors">
+                              <ImageIcon className="w-3.5 h-3.5" />
+                              <span>{zone.img ? 'Change Image' : 'Select Image File'}</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={e => handleZoneImageUpload(zone.id, e)}
+                                className="hidden"
+                              />
+                            </label>
+                            {zone.img && (
+                              <button
+                                type="button"
+                                onClick={() => zone.setImg('')}
+                                className="px-2.5 py-1.5 rounded-lg bg-red-600/20 hover:bg-red-600/40 text-red-300 border border-red-500/30 text-[11px] font-bold transition-colors"
+                              >
+                                Remove
+                              </button>
+                            )}
                             {uploadingZoneId === zone.id && (
-                              <span className="text-[11px] text-amber-400 animate-pulse">Uploading...</span>
+                              <span className="text-[11px] text-amber-400 animate-pulse font-medium">Processing...</span>
                             )}
                           </div>
-                          <input
-                            type="text"
-                            value={zone.img}
-                            onChange={e => zone.setImg(e.target.value)}
-                            placeholder="Or image URL e.g. /uploads/image.png"
-                            className="w-full mt-1.5 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-[11px] text-slate-300 placeholder-slate-500 focus:outline-none font-mono"
-                          />
+                          {!zone.img?.startsWith('data:') && (
+                            <input
+                              type="text"
+                              value={zone.img}
+                              onChange={e => zone.setImg(e.target.value)}
+                              placeholder="Or enter image URL e.g. /defect-casting.svg"
+                              className="w-full mt-1.5 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-[11px] text-slate-300 placeholder-slate-500 focus:outline-none font-mono"
+                            />
+                          )}
                         </div>
 
-                        {zone.img && (
-                          <div className="mt-2 h-24 rounded-lg overflow-hidden border border-slate-700 bg-black/40 flex items-center justify-center">
+                        {zone.img ? (
+                          <div className="mt-2 h-24 rounded-lg overflow-hidden border border-slate-700 bg-black/40 flex items-center justify-center relative group">
                             <img
                               src={getFullImageUrl(zone.img)}
                               alt={`${zone.label} preview`}
                               className="w-full h-full object-contain"
                             />
+                            <div className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/70 text-[9px] text-emerald-400 font-mono border border-emerald-500/30">
+                              {zone.img.startsWith('data:') ? 'Base64 (DB)' : 'URL'}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="mt-2 h-24 rounded-lg border border-dashed border-slate-800 bg-slate-900/40 flex flex-col items-center justify-center text-slate-500 text-[10px] gap-1">
+                            <ImageIcon className="w-5 h-5 text-slate-600" />
+                            <span>No image selected</span>
                           </div>
                         )}
                       </div>
