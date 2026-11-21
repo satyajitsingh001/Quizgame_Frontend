@@ -512,7 +512,7 @@ export const LiveControlRoom: React.FC = () => {
                 </div>
               </div>
 
-              {/* Round 2 Question Presentation (Shows Target Zones with Configured Images & Answer Key Sequence) */}
+              {/* Round 2 Question Presentation (Shows Target Zones with Configured Images) */}
               {currentQuestionData.round === 2 && (
                 <div className="rounded-2xl overflow-hidden border border-slate-700 bg-slate-950 p-4 space-y-3 shadow-xl">
                   <div className="flex items-center justify-between text-xs font-bold text-slate-300 flex-wrap gap-2">
@@ -520,8 +520,8 @@ export const LiveControlRoom: React.FC = () => {
                       <Eye className="w-4 h-4" />
                       Round 2 Target Zones &amp; Configured Images
                     </span>
-                    <span className="text-[11px] text-emerald-400 font-semibold bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
-                      Images as configured • Correct sequence per answer key
+                    <span className="text-[11px] text-cyan-400 font-semibold bg-cyan-500/10 px-2.5 py-0.5 rounded-full border border-cyan-500/20">
+                      Arrange images to match target defect names
                     </span>
                   </div>
 
@@ -585,11 +585,8 @@ export const LiveControlRoom: React.FC = () => {
                             )}
                           </div>
 
-                          <div className="flex items-center justify-between text-[10px] font-medium pt-0.5">
+                          <div className="flex items-center justify-center text-[10px] font-medium pt-0.5">
                             <span className="text-slate-400">Image [{zoneLetter}]</span>
-                            <span className="text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
-                              Key: [{d.correctImageId || zoneLetter}]
-                            </span>
                           </div>
                         </div>
                       );
