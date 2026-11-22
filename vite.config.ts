@@ -9,13 +9,13 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        // target: 'https://quizgame-backend-v1cz.onrender.com',
-        target: 'http://localhost:5001',
+        target: 'http://127.0.0.1:5001/api/health',
+        // target: 'http://localhost:5002',
         changeOrigin: true
       },
       '/uploads': {
-        // target: 'https://quizgame-backend-v1cz.onrender.com',
-        target: 'http://localhost:5001',
+        target: 'http://127.0.0.1:5001/api/health',
+        // target: 'http://localhost:5002',
         changeOrigin: true
       }
     }
